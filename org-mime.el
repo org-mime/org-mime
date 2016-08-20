@@ -65,7 +65,7 @@
 (require 'org)
 
 (defcustom org-mime-default-header
-  "#+OPTIONS: latex:t\n"
+  "#+OPTIONS: latex:t toc:nil H:3\n"
   "Default header to control html export options, and ensure
   first line isn't assumed to be a title line."
   :group 'org-mime

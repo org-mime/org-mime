@@ -50,13 +50,13 @@
 ;;
 ;;   (add-hook 'message-mode-hook
 ;;             (lambda ()
-;;               (local-set-key "\C-c\M-o" 'org-mime-htmlize)))
+;;               (local-set-key (kbd "C-c M-o") 'org-mime-htmlize)))
 ;;
 ;; and the following org-mode binding
 ;;
 ;;   (add-hook 'org-mode-hook
 ;;             (lambda ()
-;;               (local-set-key "\C-c\M-o" 'org-mime-org-buffer-htmlize)))
+;;               (local-set-key (kbd "C-c M-o") 'org-mime-org-buffer-htmlize)))
 
 ;;; Code:
 (require 'cl)

@@ -130,10 +130,10 @@ exported html."
 (defun org-mime-file (ext path id)
   "Markup a file for attachment."
   (case org-mime-library
-    ('mml (format (concat "<#part type=\"%s\" filename=\"%s\" "
+    (mml (format (concat "<#part type=\"%s\" filename=\"%s\" "
 			  "disposition=inline id=\"<%s>\">\n<#/part>\n")
 		  ext path id))
-    ('semi (concat
+    (semi (concat
             (format (concat "--[[%s\nContent-Disposition: "
 			    "inline;\nContent-ID: <%s>][base64]]\n")
 		    ext id)
@@ -142,14 +142,14 @@ exported html."
                (set-buffer-multibyte nil)
                (binary-insert-encoded-file path)
                (buffer-string)))))
-    ('vm "?")))
+    (vm "?")))
 
 (defun org-mime-multipart (plain html &optional images)
   "Markup a multipart/alternative with text/plain and text/html alternatives.
 If the html portion of the message includes images wrap the html
 and images in a multipart/related part."
   (case org-mime-library
-    ('mml (concat "<#multipart type=alternative><#part type=text/plain>"
+    (mml (concat "<#multipart type=alternative><#part type=text/plain>"
 		  plain
 		  (when images "<#multipart type=related>")
 		  "<#part type=text/html>"
@@ -157,7 +157,7 @@ and images in a multipart/related part."
 		  images
 		  (when images "<#/multipart>\n")
 		  "<#/multipart>\n"))
-    ('semi (concat
+    (semi (concat
             "--" "<<alternative>>-{\n"
             "--" "[[text/plain]]\n" plain
 	    (when images (concat "--" "<<alternative>>-{\n"))
@@ -165,7 +165,7 @@ and images in a multipart/related part."
 	    images
 	    (when images (concat "--" "}-<<alternative>>\n"))
             "--" "}-<<alternative>>\n"))
-    ('vm "?")))
+    (vm "?")))
 
 (defun org-mime-replace-images (str current-file)
   "Replace images in html files with cid links."

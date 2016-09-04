@@ -59,9 +59,7 @@
 ;;               (local-set-key (kbd "C-c M-o") 'org-mime-org-buffer-htmlize)))
 
 ;;; Code:
-(eval-when-compile
-  (require 'cl))
-
+(require 'cl-lib)
 (require 'org)
 
 (defcustom org-mime-default-header

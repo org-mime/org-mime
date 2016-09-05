@@ -239,16 +239,28 @@ export that region, otherwise export the entire body."
 (defmacro org-mime-try (&rest body)
   `(condition-case nil ,@body (error nil)))
 
+(defun org-mime--get-buffer-title ()
+  "Returns the `TITLE' option of the current buffer, or `nil' if
+it is not set."
+  (let ((tmp (plist-get (org-export--get-inbuffer-options) :title)))
+    (when tmp
+      (let ((txt (car tmp)))
+        (set-text-properties 0 (length txt) nil txt)
+        txt))))
+
 (defun org-mime-send-buffer ()
   (run-hooks 'org-mime-send-buffer-hook)
   (let* ((region-p (org-region-active-p))
-	 (subject (org-export-grab-title-from-buffer))
          (file (buffer-file-name (current-buffer)))
+         (subject (or (org-mime--get-buffer-title)
+                      (if (not file) (buffer-name (buffer-base-buffer))
+                        (file-name-sans-extension
+                         (file-name-nondirectory file)))))
          (body-start (or (and region-p (region-beginning))
                          (save-excursion (goto-char (point-min)))))
          (body-end (or (and region-p (region-end)) (point-max)))
-	 (temp-body-file (make-temp-file "org-mime-export"))
-	 (body (buffer-substring body-start body-end)))
+         (temp-body-file (make-temp-file "org-mime-export"))
+         (body (buffer-substring body-start body-end)))
     (org-mime-compose body file nil subject)))
 
 (defun org-mime-compose (body file &optional to subject headers)

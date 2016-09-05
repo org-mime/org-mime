@@ -98,10 +98,10 @@ buffer holding\nthe text to be exported.")
 (defvar org-mime-send-buffer-hook nil
   "Hook to run in the Org-mode file before export.")
 
-(defun org-mime--export-string (s)
+(defun org-mime--export-string (s &optional opts)
   (if (fboundp 'org-export-string-as)
       ;; emacs24
-      (org-export-string-as s 'html t)
+      (org-export-string-as s 'html t opts)
     ;; emacs 23
     (org-export-string s "html")))
 
@@ -251,7 +251,17 @@ export that region, otherwise export the entire body."
 	 (body (buffer-substring body-start body-end)))
     (org-mime-compose body file nil subject)))
 
-(defun org-mime-compose (body file &optional to subject headers)
+(defun org-mime-send-subtree ()
+  (run-hooks 'org-mime-send-buffer-hook)
+  (save-excursion
+    (org-up-heading-safe)
+    (let* ((file (buffer-file-name (current-buffer)))
+           (subject (nth 4 (org-heading-components)))
+           (opts (org-export--get-subtree-options))
+           (body (org-get-entry)))
+      (org-mime-compose body file nil subject nil opts))))
+
+(defun org-mime-compose (body file &optional to subject headers opts)
   (let* ((fmt 'html))
     (unless (featurep 'message)
       (require 'message))
@@ -271,7 +281,7 @@ export that region, otherwise export the entire body."
              (org-export-htmlize-output-type 'inline-css)
              (html-and-images
               (org-mime-replace-images
-               (org-mime--export-string (bhook body 'html)) file))
+               (org-mime--export-string (bhook body 'html) opts) file))
              (images (cdr html-and-images))
              (html (org-mime-apply-html-hook (car html-and-images))))
         (insert (org-mime-multipart (org-babel-trim body) html)
@@ -283,6 +293,13 @@ export that region, otherwise export the entire body."
   mime alternatives."
   (interactive)
   (org-mime-send-buffer))
+
+(defun org-mime-org-subtree-htmlize ()
+  "Create an email buffer containing the current subtree of the
+  current org-mode file exported to html and encoded in both html
+  and in org formats as mime alternatives."
+  (interactive)
+  (org-mime-send-subtree))
 
 (provide 'org-mime)
 ;;; org-mime.el ends here

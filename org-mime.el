@@ -267,6 +267,7 @@ export that region, otherwise export the entire body."
                           (buffer-string))
                       body))))
       (let* ((org-link-file-path-type 'absolute)
+             (plain (org-export-string-as (org-babel-trim body) 'ascii t opts))
              ;; we probably don't want to export a huge style file
              (org-export-htmlize-output-type 'inline-css)
              (html-and-images
@@ -274,7 +275,7 @@ export that region, otherwise export the entire body."
                (org-mime--export-string (bhook body 'html)) file))
              (images (cdr html-and-images))
              (html (org-mime-apply-html-hook (car html-and-images))))
-        (insert (org-mime-multipart (org-babel-trim body) html)
+        (insert (org-mime-multipart plain html)
                 (mapconcat 'identity images "\n"))))))
 
 (defun org-mime-org-buffer-htmlize ()

@@ -98,6 +98,9 @@ buffer holding\nthe text to be exported.")
 (defvar org-mime-send-buffer-hook nil
   "Hook to run in the Org-mode file before export.")
 
+(defvar org-mime-debug nil
+  "Enable debug logger.")
+
 (defun org-mime--export-string (s &optional opts)
   (if (fboundp 'org-export-string-as)
       ;; emacs24
@@ -129,6 +132,7 @@ exported html."
 
 (defun org-mime-file (ext path id)
   "Markup a file for attachment."
+  (if org-mime-debug (message "org-mime-file called => %s %s %s" ext path id))
   (case org-mime-library
     (mml (format (concat "<#part type=\"%s\" filename=\"%s\" "
 			  "disposition=inline id=\"<%s>\">\n<#/part>\n")
@@ -169,7 +173,8 @@ and images in a multipart/related part."
 
 (defun org-mime-replace-images (str current-file)
   "Replace images in html files with cid links."
-  (let (html-images)
+  (if org-mime-debug (message "org-mime-replace-images called => %s" current-file)
+)  (let* (html-images)
     (cons
      (replace-regexp-in-string ;; replace images in html
       "src=\"\\([^\"]+\\)\""
@@ -178,8 +183,8 @@ and images in a multipart/related part."
          "src=\"cid:%s\""
          (let* ((url (and (string-match "src=\"\\([^\"]+\\)\"" text)
                           (match-string 1 text)))
-                (path (expand-file-name
-                       url (file-name-directory current-file)))
+                (path (if (string-match-p "^file:///" url) (replace-regexp-in-string "^file://" "" url)
+                        (expand-file-name url (file-name-directory current-file))))
                 (ext (file-name-extension path))
                 (id (replace-regexp-in-string "[\/\\\\]" "_" path)))
            (add-to-list 'html-images
@@ -192,6 +197,7 @@ and images in a multipart/related part."
   "Export a portion of an email body composed using `mml-mode' to
 html using `org-mode'.  If called with an active region only
 export that region, otherwise export the entire body."
+  (if org-mime-debug (message "org-mime-htmlize called"))
   (interactive "P")
   (let* ((region-p (org-region-active-p))
          (html-start (or (and region-p (region-beginning))
@@ -203,19 +209,19 @@ export that region, otherwise export the entire body."
                        ;; TODO: should catch signature...
                        (point-max)))
          (body (concat org-mime-default-header
-			   (buffer-substring html-start html-end)))
+                       (buffer-substring html-start html-end)))
          (tmp-file (make-temp-name (expand-file-name
-				    "mail" temporary-file-directory)))
+                                    "mail" temporary-file-directory)))
          ;; because we probably don't want to export a huge style file
          (org-export-htmlize-output-type 'inline-css)
          ;; makes the replies with ">"s look nicer
          (org-export-preserve-breaks org-mime-preserve-breaks)
-	 ;; dvipng for inline latex because MathJax doesn't work in mail
-	 (org-html-with-latex 'dvipng)
+         ;; dvipng for inline latex because MathJax doesn't work in mail
+         (org-html-with-latex 'dvipng)
          ;; to hold attachments for inline html images
          (html-and-images
           (org-mime-replace-images
-	   (org-mime--export-string body) tmp-file))
+           (org-mime--export-string body) tmp-file))
          (html-images (unless arg (cdr html-and-images)))
          (html (org-mime-apply-html-hook
                 (if arg
@@ -242,7 +248,8 @@ export that region, otherwise export the entire body."
 (defun org-mime--get-buffer-title ()
   "Returns the `TITLE' option of the current buffer, or `nil' if
 it is not set."
-  (let ((tmp (plist-get (org-export--get-inbuffer-options) :title)))
+  (let* ((tmp (if (fboundp 'org-export--get-inbuffer-options)
+                  (plist-get (org-export--get-inbuffer-options) :title))))
     (when tmp
       (let ((txt (car tmp)))
         (set-text-properties 0 (length txt) nil txt)
@@ -274,6 +281,7 @@ it is not set."
       (org-mime-compose body file nil subject nil opts))))
 
 (defun org-mime-compose (body file &optional to subject headers opts)
+  (if org-mime-debug (message "org-mime-compose called => %s" file))
   (let* ((fmt 'html))
     (unless (featurep 'message)
       (require 'message))

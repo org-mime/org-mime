@@ -7,6 +7,7 @@
 ;; Keywords: mime, mail, email, html
 ;; Homepage: http://github.com/org-mime/org-mime
 ;; Version: 0.0.4
+;; Package-Requires: ((cl-lib "0.5"))
 
 ;; This file is not part of GNU Emacs.
 
@@ -132,7 +133,7 @@ buffer holding\nthe text to be exported.")
 (defun org-mime-file (ext path id)
   "Markup a file wth EXT, PATH and ID for attachment."
   (if org-mime-debug (message "org-mime-file called => %s %s %s" ext path id))
-  (case org-mime-library
+  (cl-case org-mime-library
     (mml (format (concat "<#part type=\"%s\" filename=\"%s\" "
 			  "disposition=inline id=\"<%s>\">\n<#/part>\n")
 		  ext path id))
@@ -143,14 +144,14 @@ buffer holding\nthe text to be exported.")
             (base64-encode-string
              (with-temp-buffer
                (set-buffer-multibyte nil)
-               (binary-insert-encoded-file path)
+               (insert-file-contents-literally path)
                (buffer-string)))))
     (vm "?")))
 
 (defun org-mime-multipart (plain html &optional images)
   "Markup a multipart/alternative PLAIN with PLAIN and HTML alternatives.
 If html portion of message includes IMAGES they are wrapped in multipart/related part."
-  (case org-mime-library
+  (cl-case org-mime-library
     (mml (concat "<#multipart type=alternative><#part type=text/plain>"
 		  plain
 		  (when images "<#multipart type=related>")
@@ -196,8 +197,8 @@ CURRENT-FILE is used to calculate full path of images."
   "Export a portion of an email to html using `org-mode'.
 If called with an active region only export that region, otherwise entire body.
 If ARG is not NIL, use `org-mime-fixedwith-wrap' to wrap the exported text."
-  (if org-mime-debug (message "org-mime-htmlize called"))
   (interactive "P")
+  (if org-mime-debug (message "org-mime-htmlize called"))
   (let* ((region-p (org-region-active-p))
          (html-start (or (and region-p (region-beginning))
                          (save-excursion
@@ -259,15 +260,15 @@ If ARG is not NIL, use `org-mime-fixedwith-wrap' to wrap the exported text."
       (require 'message))
     (message-mail nil subject nil nil)
     (message-goto-body)
-    (flet ((bhook (body fmt)
-                  (let ((hook 'org-mime-pre-html-hook))
-                    (if (> (eval `(length ,hook)) 0)
-                        (with-temp-buffer
-                          (insert body)
-                          (goto-char (point-min))
-                          (eval `(run-hooks ',hook))
-                          (buffer-string))
-                      body))))
+    (cl-labels ((bhook (body fmt)
+                       (let ((hook 'org-mime-pre-html-hook))
+                         (if (> (eval `(length ,hook)) 0)
+                             (with-temp-buffer
+                               (insert body)
+                               (goto-char (point-min))
+                               (eval `(run-hooks ',hook))
+                               (buffer-string))
+                           body))))
       (let* ((org-link-file-path-type 'absolute)
              (plain (org-export-string-as (org-babel-trim body) 'ascii t nil))
              ;; we probably don't want to export a huge style file

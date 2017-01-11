@@ -196,8 +196,8 @@ CURRENT-FILE is used to calculate full path of images."
   "Export a portion of an email to html using `org-mode'.
 If called with an active region only export that region, otherwise entire body.
 If ARG is not NIL, use `org-mime-fixedwith-wrap' to wrap the exported text."
-  (if org-mime-debug (message "org-mime-htmlize called"))
   (interactive "P")
+  (if org-mime-debug (message "org-mime-htmlize called"))
   (let* ((region-p (org-region-active-p))
          (html-start (or (and region-p (region-beginning))
                          (save-excursion

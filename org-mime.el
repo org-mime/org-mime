@@ -143,7 +143,7 @@ buffer holding\nthe text to be exported.")
             (base64-encode-string
              (with-temp-buffer
                (set-buffer-multibyte nil)
-               (binary-insert-encoded-file path)
+               (insert-file-contents-literally path)
                (buffer-string)))))
     (vm "?")))
 

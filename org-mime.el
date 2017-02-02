@@ -41,6 +41,18 @@
 ;; package the results into an email handling with appropriate MIME
 ;; encoding.
 ;;
+;; `org-mime-org-subtree-htmlize' is similar to `org-mime-org-buffer-htmlize'
+;; but works on subtree. It can also read subtree properties MAIL_SUBJECT,
+;; MAIL_TO, MAIL_CC, and MAIL_BCC. Here is the sample of subtree:
+;;
+;; * mail one
+;;   :PROPERTIES:
+;;   :MAIL_SUBJECT: mail title
+;;   :MAIL_TO: person1@gmail.com
+;;   :MAIL_CC: person2@gmail.com
+;;   :MAIL_BCC: person3@gmail.com
+;;   :END:
+;;
 ;; Quick start:
 ;; Write mail in message-mode, make sure the mail body follows org format.
 ;; Before sending mail, `M-x org-mime-htmlize'
@@ -62,6 +74,11 @@
 ;;; Code:
 (require 'cl-lib)
 (require 'org)
+
+(defcustom org-mime-use-property-inheritance nil
+  "Non-nil means al MAIL_ properties apply also for sublevels."
+  :group 'org-mime
+  :type 'boolean)
 
 (defcustom org-mime-default-header
   "#+OPTIONS: latex:t toc:nil H:3\n"
@@ -101,8 +118,8 @@ buffer holding\nthe text to be exported.")
 (defvar org-mime-debug nil
   "Enable debug logger.")
 
-(defun org-mime--export-string (s)
-  "Export string S into HTML format."
+(defun org-mime--export-string (s &optional opts)
+  "Export string S into HTML format.  OPTS is export options."
   (if (fboundp 'org-export-string-as)
       ;; emacs24
       (org-export-string-as s 'html t nil)
@@ -252,13 +269,13 @@ If ARG is not NIL, use `org-mime-fixedwith-wrap' to wrap the exported text."
         (set-text-properties 0 (length txt) nil txt)
         txt))))
 
-(defun org-mime-compose (body file &optional subject)
-  "Create mail BODY in FILE with SUBJECT."
+(defun org-mime-compose (body file &optional to subject headers opts)
+  "Create mail BODY in FILE with SUBJECT, HEADERS and OPTS."
   (if org-mime-debug (message "org-mime-compose called => %s" file))
   (let* ((fmt 'html))
     (unless (featurep 'message)
       (require 'message))
-    (message-mail nil subject nil nil)
+    (message-mail to subject headers nil)
     (message-goto-body)
     (cl-labels ((bhook (body fmt)
                        (let ((hook 'org-mime-pre-html-hook))
@@ -275,7 +292,7 @@ If ARG is not NIL, use `org-mime-fixedwith-wrap' to wrap the exported text."
              (org-export-htmlize-output-type 'inline-css)
              (html-and-images
               (org-mime-replace-images
-               (org-mime--export-string (bhook body 'html)) file))
+               (org-mime--export-string (bhook body 'html) opts) file))
              (images (cdr html-and-images))
              (html (org-mime-apply-html-hook (car html-and-images))))
         (insert (org-mime-multipart plain html)
@@ -297,7 +314,31 @@ If ARG is not NIL, use `org-mime-fixedwith-wrap' to wrap the exported text."
          (body-end (or (and region-p (region-end)) (point-max)))
          (temp-body-file (make-temp-file "org-mime-export"))
          (body (buffer-substring body-start body-end)))
-    (org-mime-compose body file subject)))
+    (org-mime-compose body file nil subject)))
+
+;;;###autoload
+(defun org-mime-org-subtree-htmlize ()
+  "Create an email buffer containing the current subtree of the
+current org-mode file exported to html and encoded in both html
+and in org formats as mime alternatives."
+  (interactive)
+  (save-excursion
+    (org-up-heading-safe)
+    (cl-flet ((mp (p) (org-entry-get nil p org-mime-use-property-inheritance)))
+      (let* ((file (buffer-file-name (current-buffer)))
+             (subject (or (mp "MAIL_SUBJECT") (nth 4 (org-heading-components))))
+             (to (mp "MAIL_TO"))
+             (cc (mp "MAIL_CC"))
+             (bcc (mp "MAIL_BCC"))
+             ;; Thanks for Matt Price improving handling of cc & bcc headers
+             (other-headers (cond
+                             ((and cc bcc) `((cc . ,cc) (bcc . ,bcc)))
+                             (cc `((cc . ,cc)))
+                             (bcc `((bcc . ,bcc)))
+                             (t nil)))
+             (opts (org-export--get-subtree-options))
+             (body (org-get-entry)))
+        (org-mime-compose body file to subject other-headers opts)))))
 
 (provide 'org-mime)
 ;;; org-mime.el ends here

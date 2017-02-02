@@ -37,6 +37,20 @@ The following key bindings are suggested, which bind the C-c M-o key sequence to
             (local-set-key (kbd "C-c M-o") 'org-mime-org-buffer-htmlize)))
 #+end_src
 
+** =M-x org-mime-org-subtree-htmlize=
+=org-mime-org-subtree-htmlize= is similar to =org-mime-org-buffer-htmlize=
+but works on subtree. It can also read subtree properties MAIL_SUBJECT,
+MAIL_TO, MAIL_CC, and MAIL_BCC. Here is the sample of subtree:
+#+begin_src org
+* mail one
+  :PROPERTIES:
+  :MAIL_SUBJECT: mail title
+  :MAIL_TO: person1@gmail.com
+  :MAIL_CC: person2@gmail.com
+  :MAIL_BCC: person3@gmail.com
+  :END:
+content ...
+#+end_src
 ** CSS style customization
 Email clients will often strip all global CSS from email messages. In the case of web-based email readers this is essential in order to protect the CSS of the containing web site. To ensure that your CSS styles are rendered correctly they must be included in the actual body of the elements to which they apply.
 

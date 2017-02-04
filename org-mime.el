@@ -123,7 +123,7 @@ buffer holding\nthe text to be exported.")
   "Export string S into HTML format.  OPTS is export options."
   (if (fboundp 'org-export-string-as)
       ;; emacs24
-      (org-export-string-as s 'html t nil)
+      (org-export-string-as s 'html t opts)
     ;; emacs 23
     (org-export-string s "html")))
 

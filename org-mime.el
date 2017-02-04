@@ -74,6 +74,7 @@
 ;;; Code:
 (require 'cl-lib)
 (require 'org)
+(require 'ox) ; org export lib
 
 (defcustom org-mime-use-property-inheritance nil
   "Non-nil means al MAIL_ properties apply also for sublevels."

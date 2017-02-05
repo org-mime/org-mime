@@ -6,7 +6,7 @@
 ;; Maintainer: Chen Bin (redguardtoo)
 ;; Keywords: mime, mail, email, html
 ;; Homepage: http://github.com/org-mime/org-mime
-;; Version: 0.0.4
+;; Version: 0.0.5
 ;; Package-Requires: ((cl-lib "0.5"))
 
 ;; This file is not part of GNU Emacs.
@@ -52,6 +52,13 @@
 ;;   :MAIL_CC: person2@gmail.com
 ;;   :MAIL_BCC: person3@gmail.com
 ;;   :END:
+;;
+;; To avoid exporting TOC, you can setup `org-mime-export-options',
+;;   (setq org-mime-export-options '(:section-numbers nil
+;;                                   :with-author nil
+;;                                   :with-toc nil))
+;; Or just setup your export options in org buffer/subtree which is overrided
+;; by `org-mime-export-options' when it's NOT nil.
 ;;
 ;; Quick start:
 ;; Write mail in message-mode, make sure the mail body follows org format.
@@ -104,6 +111,11 @@ And ensure first line isn't assumed to be a title line."
   :group 'org-mime
   :type 'string)
 
+(defvar org-mime-export-options nil
+  "Default export options which may overrides org buffer/subtree options.
+You avoid exporting section-number/author/toc with below setup,
+`(setq org-mime-export-options '(:section-numbers nil :with-author nil :with-toc nil))'")
+
 (defvar org-mime-html-hook nil
   "Hook to run over the html buffer before attachment to email.
 This could be used for example to post-process html elements.")
@@ -121,9 +133,12 @@ buffer holding\nthe text to be exported.")
 
 (defun org-mime--export-string (s &optional opts)
   "Export string S into HTML format.  OPTS is export options."
+  (if org-mime-debug (message "org-mime--export-string called => %s" opts))
+  ;; we won't export title from org file anyway
+  (if opts (setq opts (plist-put opts 'title nil)))
   (if (fboundp 'org-export-string-as)
       ;; emacs24
-      (org-export-string-as s 'html t opts)
+      (org-export-string-as s 'html t (if org-mime-export-options org-mime-export-options opts))
     ;; emacs 23
     (org-export-string s "html")))
 
@@ -149,7 +164,7 @@ buffer holding\nthe text to be exported.")
 ;;              "verse" "border-left: 2px solid gray; padding-left: 4px;")))
 
 (defun org-mime-file (ext path id)
-  "Markup a file wth EXT, PATH and ID for attachment."
+  "Markup a file with EXT, PATH and ID for attachment."
   (if org-mime-debug (message "org-mime-file called => %s %s %s" ext path id))
   (cl-case org-mime-library
     (mml (format (concat "<#part type=\"%s\" filename=\"%s\" "
@@ -239,7 +254,10 @@ If ARG is not NIL, use `org-mime-fixedwith-wrap' to wrap the exported text."
          ;; to hold attachments for inline html images
          (html-and-images
           (org-mime-replace-images
-           (org-mime--export-string body) tmp-file))
+           (org-mime--export-string body
+                                    (if (fboundp 'org-export--get-inbuffer-options)
+                                        (org-export--get-inbuffer-options)))
+           tmp-file))
          (html-images (unless arg (cdr html-and-images)))
          (html (org-mime-apply-html-hook
                 (if arg
@@ -272,7 +290,7 @@ If ARG is not NIL, use `org-mime-fixedwith-wrap' to wrap the exported text."
 
 (defun org-mime-compose (body file &optional to subject headers opts)
   "Create mail BODY in FILE with SUBJECT, HEADERS and OPTS."
-  (if org-mime-debug (message "org-mime-compose called => %s" file))
+  (if org-mime-debug (message "org-mime-compose called => %s %s" file opts))
   (let* ((fmt 'html))
     (unless (featurep 'message)
       (require 'message))
@@ -293,7 +311,8 @@ If ARG is not NIL, use `org-mime-fixedwith-wrap' to wrap the exported text."
              (org-export-htmlize-output-type 'inline-css)
              (html-and-images
               (org-mime-replace-images
-               (org-mime--export-string (bhook body 'html) opts) file))
+               (org-mime--export-string (bhook body 'html) opts)
+               file))
              (images (cdr html-and-images))
              (html (org-mime-apply-html-hook (car html-and-images))))
         (insert (org-mime-multipart plain html)
@@ -315,7 +334,13 @@ If ARG is not NIL, use `org-mime-fixedwith-wrap' to wrap the exported text."
          (body-end (or (and region-p (region-end)) (point-max)))
          (temp-body-file (make-temp-file "org-mime-export"))
          (body (buffer-substring body-start body-end)))
-    (org-mime-compose body file nil subject)))
+    (org-mime-compose body
+                      file
+                      nil ; TO
+                      subject
+                      nil ; HEADERS (CC, BCC ...)
+                      (if (fboundp 'org-export--get-inbuffer-options)
+                          (org-export--get-inbuffer-options)))))
 
 ;;;###autoload
 (defun org-mime-org-subtree-htmlize ()
@@ -337,7 +362,7 @@ and in org formats as mime alternatives."
                              (cc `((cc . ,cc)))
                              (bcc `((bcc . ,bcc)))
                              (t nil)))
-             (opts (org-export--get-subtree-options))
+             (opts (if (fboundp 'org-export--get-subtree-options) (org-export--get-subtree-options)))
              (body (org-get-entry)))
         (org-mime-compose body file to subject other-headers opts)))))
 

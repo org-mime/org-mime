@@ -3,7 +3,7 @@ org-mime can be used to send HTML email using Org-mode HTML export.
 
 This approximates a WYSiWYG HTML mail editor from within Emacs, and can be useful for sending tables, fontified source code, and inline images in email.
 
-Tested on Emacs 23.4, 24.3, 24.4, 24.5, 25.1.
+Tested on Emacs 24.3, 24.4, 24.5, 25.1.
 * Setup
 #+begin_src elisp
 (require 'org-mime)

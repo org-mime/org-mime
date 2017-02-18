@@ -87,7 +87,7 @@ Or just setup your export options in org buffer/subtree which is overrided by `o
 - Make sure your code has minimum dependency and works on Emacs versions we support
 * Credits
 - org-mime was developed by Eric Schulte with much-appreciated help and discussion from everyone on the [[https://lists.gnu.org/archive/html/emacs-orgmode/2010-03/msg00500.html][using orgmode to send html mail]] thread especially Eric S. Fraga for adding WL support.
-- [[https://github.com/acowley][Anthony Cowley]] fixed many bugs for exporting and support more export options
+- [[https://github.com/acowley][Anthony Cowley]] fixed many bugs for exporting
 - [[https://github.com/titaniumbones][Matt Price]] improved handling of mail headers (CC, BCC ...)
 * Licence
 Documentation from the http://orgmode.org/worg/ website (either in its HTML format or in its Org format) is licensed under the [[http://www.gnu.org/copyleft/fdl.html][GNU Free Documentation License version 1.3]] or later. The code examples and css style sheets are licensed under the [[http://www.gnu.org/licenses/gpl.html][GNU General Public License v3 or later]].

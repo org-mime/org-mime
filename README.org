@@ -3,7 +3,7 @@ org-mime can be used to send HTML email using Org-mode HTML export.
 
 This approximates a WYSiWYG HTML mail editor from within Emacs, and can be useful for sending tables, fontified source code, and inline images in email.
 
-Tested on Emacs 24.3, 24.4, 24.5, 25.1.
+Tested on Emacs 24.3, 24.4, 24.5, 25.1, 25.2
 * Setup
 #+begin_src elisp
 (require 'org-mime)
@@ -80,7 +80,9 @@ To avoid exporting TOC, you can setup `org-mime-export-options',
                                 :with-author nil
                                 :with-toc nil))
 #+end_src
-Or just setup your export options in org buffer/subtree which is overrided by `org-mime-export-options' when it's NOT nil.
+Or just setup your export options in org buffer/subtree.
+
+`org-mime-export-options' will override your export options if it's NOT nil.
 * Development
 - Patches are always welcomed
 - You can =(setq org-mime-debug t)= to enable the log

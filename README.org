@@ -51,6 +51,11 @@ MAIL_TO, MAIL_CC, and MAIL_BCC. Here is the sample of subtree:
  :END:
 content ...
 #+end_example
+** embed image into mail body
+Use below syntax,
+#+begin_example
+[[/full/path/to/your.jpg]]
+#+end_example
 ** CSS style customization
 Email clients will often strip all global CSS from email messages. In the case of web-based email readers this is essential in order to protect the CSS of the containing web site. To ensure that your CSS styles are rendered correctly they must be included in the actual body of the elements to which they apply.
 

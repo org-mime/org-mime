@@ -81,8 +81,16 @@
 ;;             (lambda ()
 ;;               (local-set-key (kbd "C-c M-o") 'org-mime-org-buffer-htmlize)))
 ;;
-;; In order to embed image into your mail, use below org syntax,
+;; Extra Tips:
+;; 1. In order to embed image into your mail, use below org syntax,
 ;;   [[/full/path/to/your.jpg]]
+;;
+;; 2. It's easy to add your own emphasis symbol.  For example, in order to render
+;; text between "@" in red color, you can use `org-mime-html-hook':
+;;   (add-hook 'org-mime-html-hook
+;;             (lambda ()
+;;               (while (re-search-forward "@\\([^@]*\\)@" nil t)
+;;                 (replace-match "<span style=\"color:red\">\\1</span>"))))
 
 ;;; Code:
 (require 'cl-lib)

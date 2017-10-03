@@ -20,7 +20,7 @@ Tested on Emacs 24.3, 24.4, 24.5, 25.1, 25.2
 
 Export a portion of an email body composed using `mml-mode' to html using `org-mode'.  If called with an active region only export that region, otherwise export the entire body.
 
-Warning: There has been some concern voiced over the potential complexity of email resulting from calling this function on an active region resulting in multiple =multipart/alternative= sections in the same email. Please see this email thread for a discussion of the potential pitfalls of this approach. Speaking from personal experience this has not been a problem for the author.
+Warning: There has been some concern voiced over the potential complexity of email resulting from calling this function on an active region resulting in multiple =multipart/alternative= sections in the same email. Please see [[http://thread.gmane.org/gmane.emacs.orgmode/23617][this email thread]] for a discussion of the potential pitfalls of this approach. Speaking from personal experience this has not been a problem for the author.
 
 ** =M-x org-mime-org-buffer-htmlize=
 =org-mime-org-buffer-htmlize= can be called from within an Org-mode buffer to export either the whole buffer or the narrowed subtree or active region to HTML, and open a new email buffer including the resulting HTML content as an embedded mime section.

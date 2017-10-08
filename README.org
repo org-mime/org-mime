@@ -51,7 +51,7 @@ MAIL_TO, MAIL_CC, and MAIL_BCC. Here is the sample of subtree:
  :END:
 content ...
 #+end_example
-** embed image into mail body
+** Embed image into mail body
 Use below syntax,
 #+begin_example
 [[/full/path/to/your.jpg]]
@@ -85,6 +85,8 @@ Render text between "@" in red color, you can use `org-mime-html-hook',
               (replace-match "<span style=\"color:red\">\\1</span>"))))
 #+end_src
 For other customization options see the org-mime customization group.
+** Beautify quoted mail when replying
+It already works out of box. Currently it emulate Gmail's style. You can go back the old Gnus style by =(setq org-mime-beautify-quoted-mail nil)=.
 ** Export options
 To avoid exporting TOC, you can setup `org-mime-export-options',
 #+begin_src elisp

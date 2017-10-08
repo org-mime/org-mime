@@ -82,8 +82,8 @@
 ;;               (local-set-key (kbd "C-c M-o") 'org-mime-org-buffer-htmlize)))
 ;;
 ;; Extra Tips:
-;; 1. In order to embed image into your mail, use below org syntax,
-;;   [[/full/path/to/your.jpg]]
+;; 1. In order to embed image into your mail, use below syntax,
+;; [[/full/path/to/your.jpg]]
 ;;
 ;; 2. It's easy to add your own emphasis symbol.  For example, in order to render
 ;; text between "@" in red color, you can use `org-mime-html-hook':
@@ -92,8 +92,9 @@
 ;;               (while (re-search-forward "@\\([^@]*\\)@" nil t)
 ;;                 (replace-match "<span style=\"color:red\">\\1</span>"))))
 ;;
-;; 3. Since v0.0.8, the quoted mail use modern style (like Gmail). If you prefer
-;;    the original style, please set `org-mime-beautify-quoted-mail' to nil.
+;; 3. Since v0.0.8, the quoted mail uses modern style (like Gmail).
+;; So replyed mail looks clean and modern. If you prefer old style, please set
+;; `org-mime-beautify-quoted-mail' to nil.
 
 ;;; Code:
 (require 'cl-lib)

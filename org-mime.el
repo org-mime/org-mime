@@ -6,7 +6,7 @@
 ;; Maintainer: Chen Bin (redguardtoo)
 ;; Keywords: mime, mail, email, html
 ;; Homepage: http://github.com/org-mime/org-mime
-;; Version: 0.0.8
+;; Version: 0.0.9
 ;; Package-Requires: ((emacs "24.3") (cl-lib "0.5"))
 
 ;; This file is not part of GNU Emacs.
@@ -92,12 +92,13 @@
 ;;               (while (re-search-forward "@\\([^@]*\\)@" nil t)
 ;;                 (replace-match "<span style=\"color:red\">\\1</span>"))))
 ;;
-;; 3. Since v0.0.8, the quoted mail uses modern style (like Gmail).
+;; 3. Since v0.0.9, the quoted mail uses modern style (like Gmail).
 ;; So replyed mail looks clean and modern. If you prefer old style, please set
 ;; `org-mime-beautify-quoted-mail' to nil.
 
 ;;; Code:
 (require 'cl-lib)
+(require 'xml)
 (require 'org)
 
 (defcustom org-mime-beautify-quoted-mail t
@@ -224,31 +225,68 @@ You could use either `org-up-heading-safe' or `org-back-to-heading'.")
                (buffer-string)))))
     (vm "?")))
 
+(defun org-mime-encode-quoted-mail-body ()
+  "Please note quoted mail body could be with reply."
+  (let* ((b (save-excursion
+              (goto-char (point-min))
+              (search-forward-regexp "^[^ ]*&gt; ")
+              (search-backward-regexp "<p>")
+              (line-beginning-position)))
+         (e (save-excursion
+              (goto-char (point-max))
+              (search-backward-regexp "^[^ ]*&gt; ")
+              (search-forward-regexp "</p>")
+              (line-end-position)))
+         (str (format "<div>%s</div>" (buffer-substring-no-properties b e)))
+         (paragraphs (xml-node-children (car (with-temp-buffer
+                                               (insert str)
+                                               (xml--parse-buffer nil nil)))))
+         (is-quoted t)
+         lines
+         (rlt "<blockquote class=\"gmail_quote\" style=\"margin:0 0 0 .8ex;border-left:1px #ccc solid;padding-left:1ex\">\n<p>\n"))
+    (dolist (p paragraphs)
+      (when (and p (> (length p) 2))
+        (dolist (s p)
+          (when (and s
+                     (not (eq s 'p))
+                     (not (consp s))
+                     (not (string= s "\n")))
+            ;; trim string
+            (setq s (replace-regexp-in-string "\\`[ \t\n]*" "" (replace-regexp-in-string "[ \t\n]*\\'" "" s)))
+            (setq lines (split-string s "\n"))
+            (dolist (l lines)
+              (cond
+               ((string-match "^ *[^ ]*> \\(.*\\)" l)
+                (when (not is-quoted)
+                  (setq rlt (concat rlt "</p>\n<blockquote class=\"gmail_quote\" style=\"margin:0 0 0 .8ex;border-left:1px #ccc solid;padding-left:1ex\">\n<p>\n"))
+                  (setq is-quoted t))
+                (setq rlt (concat rlt (match-string 1 l) "<br />\n")))
+               ((string= l "")
+                (set rlt (concat rlt "<br />")))
+               (t
+                (when is-quoted
+                  (setq rlt (concat rlt "</p>\n</blockquote>\n<p>\n"))
+                  (setq is-quoted nil))
+                (setq rlt (concat rlt l "\n")))))))))
+    (setq rlt (concat rlt (if is-quoted "</p>\n</blockquote>\n" "</p>\n")))
+    (list b e rlt )))
+
 (defun org-mime-cleanup-quoted (html)
   "Clean up quoted mail in modern UI style."
   (cond
    (org-mime-beautify-quoted-mail
-    (with-temp-buffer
-      ;; clean title of quoted
-      (insert (replace-regexp-in-string
-               "<p>[\n\r]*&gt;&gt;&gt;&gt;&gt; .* == \\([^\r\n]*\\)[\r\n]*</p>"
-               "<div class=\"gmail_quote\">\\1</div>"
-               html))
-      ;; now handle body, try to find beginning
-      (goto-char (point-min))
-      (search-forward-regexp "^[^ ]*&gt; ")
-      (search-backward-regexp "<p>")
-      ;; gmail use this style
-      (insert "<blockquote class=\"gmail_quote\" style=\"margin:0 0 0 .8ex;border-left:1px #ccc solid;padding-left:1ex\">\n")
-      ;; find end
-      (goto-char (point-max))
-      (search-backward-regexp "^[^ ]*&gt; ")
-      (search-forward-regexp "</p>")
-      (goto-char (+ (point) 1))
-      (insert "</blockquote>")
-      (setq html (buffer-substring-no-properties (point-min) (point-max))))
-    ;; remove "User> "
-    (replace-regexp-in-string "^ *[^ ]*&gt; " "" html))
+    (let* (info)
+      (with-temp-buffer
+        ;; clean title of quoted
+        (insert (replace-regexp-in-string
+                 "<p>[\n\r]*&gt;&gt;&gt;&gt;&gt; .* == \\([^\r\n]*\\)[\r\n]*</p>"
+                 "<div class=\"gmail_quote\">\\1</div>"
+                 html))
+        (setq info (org-mime-encode-quoted-mail-body))
+        (delete-region (nth 0 info) (nth 1 info))
+        (goto-char (nth 0 info))
+        (insert (nth 2 info))
+        (buffer-substring-no-properties (point-min) (point-max)))))
    (t
     html)))
 

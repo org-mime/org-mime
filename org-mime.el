@@ -6,7 +6,7 @@
 ;; Maintainer: Chen Bin (redguardtoo)
 ;; Keywords: mime, mail, email, html
 ;; Homepage: http://github.com/org-mime/org-mime
-;; Version: 0.0.9
+;; Version: 0.1.0
 ;; Package-Requires: ((emacs "24.3") (cl-lib "0.5"))
 
 ;; This file is not part of GNU Emacs.
@@ -92,7 +92,7 @@
 ;;               (while (re-search-forward "@\\([^@]*\\)@" nil t)
 ;;                 (replace-match "<span style=\"color:red\">\\1</span>"))))
 ;;
-;; 3. Since v0.0.9, the quoted mail uses modern style (like Gmail).
+;; 3. Now the quoted mail uses modern style (like Gmail).
 ;; So replyed mail looks clean and modern. If you prefer old style, please set
 ;; `org-mime-beautify-quoted-mail' to nil.
 
@@ -133,6 +133,11 @@ And ensure first line isn't assumed to be a title line."
   "Format string used to wrap a fixedwidth HTML email."
   :group 'org-mime
   :type 'string)
+
+(defvar org-mime-find-html-start 'identity
+  "Call back to search the new HTML start for htmlize in message buffer."
+  :group 'org-mime
+  :type 'sexp)
 
 (defvar org-mime-export-options nil
   "Default export options which may overrides org buffer/subtree options.
@@ -345,18 +350,20 @@ CURRENT-FILE is used to calculate full path of images."
       str)
      html-images)))
 
+;;;###autoload
 (defun org-mime-htmlize (arg)
   "Export a portion of an email to html using `org-mode'.
 If called with an active region only export that region, otherwise entire body.
-If ARG is not NIL, use `org-mime-fixedwith-wrap' to wrap the exported text."
+If ARG is not nil, use `org-mime-fixedwith-wrap' to wrap the exported text."
   (interactive "P")
   (if org-mime-debug (message "org-mime-htmlize called"))
   (let* ((region-p (org-region-active-p))
-         (html-start (or (and region-p (region-beginning))
-                         (save-excursion
-                           (goto-char (point-min))
-                           (search-forward mail-header-separator)
-                           (+ (point) 1))))
+         (html-start (funcall org-mime-find-html-start
+                              (or (and region-p (region-beginning))
+                                  (save-excursion
+                                    (goto-char (point-min))
+                                    (search-forward mail-header-separator)
+                                    (+ (point) 1)))))
          (html-end (or (and region-p (region-end))
                        ;; TODO: should catch signature...
                        (point-max)))

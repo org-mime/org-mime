@@ -1,4 +1,4 @@
-* org-mime v0.0.9
+* org-mime v0.1.0
 org-mime can be used to send HTML email using Org-mode HTML export.
 
 This approximates a WYSiWYG HTML mail editor from within Emacs, and can be useful for sending tables, fontified source code, and inline images in email.
@@ -51,6 +51,7 @@ MAIL_TO, MAIL_CC, and MAIL_BCC. Here is the sample of subtree:
  :END:
 content ...
 #+end_example
+* Tips
 ** Embed image into mail body
 Use below syntax,
 #+begin_example
@@ -97,6 +98,16 @@ To avoid exporting TOC, you can setup `org-mime-export-options',
 Or just setup your export options in org buffer/subtree.
 
 `org-mime-export-options' will override your export options if it's NOT nil.
+** Keep gpg signatures outside of multipart
+=org-mime-find-html-start= gives user a chance to tweak the region beginning to htmlize,
+#+begin_src lisp
+(setq org-mime-find-html-start
+      (lambda (start)
+        (save-excursion
+          (goto-char start)
+          (search-forward "<#secure method=pgpmime mode=sign>")
+          (+ (point) 1))))
+#+end_src
 * Development
 - Patches are always welcomed
 - You can =(setq org-mime-debug t)= to enable the log

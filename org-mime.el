@@ -134,7 +134,7 @@ And ensure first line isn't assumed to be a title line."
   :group 'org-mime
   :type 'string)
 
-(defvar org-mime-find-html-start 'identity
+(defcustom org-mime-find-html-start 'identity
   "Call back to search the new HTML start for htmlize in message buffer."
   :group 'org-mime
   :type 'sexp)

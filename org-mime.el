@@ -367,8 +367,8 @@ If ARG is not nil, use `org-mime-fixedwith-wrap' to wrap the exported text."
          (html-end (or (and region-p (region-end))
                        ;; TODO: should catch signature...
                        (point-max)))
-         (body (concat org-mime-default-header
-                       (buffer-substring html-start html-end)))
+         (body (buffer-substring html-start html-end))
+         (header-body (concat org-mime-default-header body))
          (tmp-file (make-temp-name (expand-file-name
                                     "mail" temporary-file-directory)))
          ;; because we probably don't want to export a huge style file
@@ -380,7 +380,7 @@ If ARG is not nil, use `org-mime-fixedwith-wrap' to wrap the exported text."
          ;; to hold attachments for inline html images
          (html-and-images
           (org-mime-replace-images
-           (org-mime--export-string body
+           (org-mime--export-string header-body
                                     'html
                                     (if (fboundp 'org-export--get-inbuffer-options)
                                         (org-export--get-inbuffer-options)))
@@ -388,7 +388,7 @@ If ARG is not nil, use `org-mime-fixedwith-wrap' to wrap the exported text."
          (html-images (unless arg (cdr html-and-images)))
          (html (org-mime-apply-html-hook
                 (if arg
-                    (format org-mime-fixedwith-wrap body)
+                    (format org-mime-fixedwith-wrap header-body)
                   (car html-and-images)))))
     (delete-region html-start html-end)
     (save-excursion

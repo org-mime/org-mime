@@ -28,7 +28,7 @@
 
 ;;; Commentary:
 
-;; WYSWYG, html mime composition using org-mode
+;; WYSIWYG, html mime composition using org-mode
 ;;
 ;; For mail composed using the orgstruct-mode minor mode, this
 ;; provides a function for converting all or part of your mail buffer
@@ -42,8 +42,12 @@
 ;; encoding.
 ;;
 ;; `org-mime-org-subtree-htmlize' is similar to `org-mime-org-buffer-htmlize'
-;; but works on subtree. It can also read subtree properties MAIL_SUBJECT,
-;; MAIL_TO, MAIL_CC, and MAIL_BCC. Here is the sample of subtree:
+;; but works on a subtree. It can also read the following subtree properties:
+;; MAIL_SUBJECT, MAIL_TO, MAIL_CC, and MAIL_BCC. Note the behavior of this is
+;; controlled by `org-mime-up-subtree-heading'. The default is to go up to the
+;; heading containing the current subtree.
+
+;; Here is the sample of a subtree:
 ;;
 ;; * mail one
 ;;   :PROPERTIES:
@@ -53,22 +57,23 @@
 ;;   :MAIL_BCC: person3@gmail.com
 ;;   :END:
 ;;
-;; To avoid exporting TOC, you can setup `org-mime-export-options',
+;; To avoid exporting the table of contents, you can setup
+;; `org-mime-export-options':
 ;;   (setq org-mime-export-options '(:section-numbers nil
 ;;                                   :with-author nil
 ;;                                   :with-toc nil))
-;; Or just setup your export options in org buffer/subtree which is overrided
-;; by `org-mime-export-options' when it's NOT nil.
 ;;
-;; You can change `org-mime-up-subtree-heading' before exporting subtree.
-;; heck its documentation.
+;; Or just setup your export options in the org buffer/subtree. These are
+;; overridden by `org-mime-export-options' when it is non-nil.
+;;
 ;;
 ;; Quick start:
-;; Write mail in message-mode, make sure the mail body follows org format.
-;; Before sending mail, `M-x org-mime-htmlize'
+;; Write a message in message-mode, make sure the mail body follows
+;; org format. Before sending mail, run `M-x org-mime-htmlize' to convert the
+;; body to html, then send the mail as usual.
 ;;
 ;; Setup (OPTIONAL):
-;; you might want to bind this to a key with something like the
+;; You might want to bind this to a key with something like the
 ;; following message-mode binding
 ;;
 ;;   (add-hook 'message-mode-hook
@@ -82,18 +87,19 @@
 ;;               (local-set-key (kbd "C-c M-o") 'org-mime-org-buffer-htmlize)))
 ;;
 ;; Extra Tips:
-;; 1. In order to embed image into your mail, use below syntax,
+;; 1. In order to embed images into your mail, use the syntax below,
 ;; [[/full/path/to/your.jpg]]
 ;;
-;; 2. It's easy to add your own emphasis symbol.  For example, in order to render
-;; text between "@" in red color, you can use `org-mime-html-hook':
+;; 2. It's easy to add your own emphasis markup. For example, to render text
+;; between "@" in a red color, you can add a function to `org-mime-html-hook':
+;;
 ;;   (add-hook 'org-mime-html-hook
 ;;             (lambda ()
 ;;               (while (re-search-forward "@\\([^@]*\\)@" nil t)
 ;;                 (replace-match "<span style=\"color:red\">\\1</span>"))))
 ;;
-;; 3. Now the quoted mail uses modern style (like Gmail).
-;; So replyed mail looks clean and modern. If you prefer old style, please set
+;; 3. Now the quoted mail uses a modern style (like Gmail), so mail replies
+;; looks clean and modern. If you prefer the old style, please set
 ;; `org-mime-beautify-quoted-mail' to nil.
 
 ;;; Code:
@@ -146,7 +152,7 @@ And ensure first line isn't assumed to be a title line."
 
 (defvar org-mime-export-options nil
   "Default export options which may overrides org buffer/subtree options.
-You avoid exporting section-number/author/toc with below setup,
+You avoid exporting section-number/author/toc with the setup below,
 `(setq org-mime-export-options '(:section-numbers nil :with-author nil :with-toc nil))'")
 
 (defvar org-mime-html-hook nil
@@ -156,15 +162,16 @@ This could be used for example to post-process html elements.")
 (defvar org-mime-pre-html-hook nil
   "Hook to run before html export.
 Functions should take no arguments and will be run in a
-buffer holding\nthe text to be exported.")
+buffer holdin the text to be exported.")
 
 (defvar org-mime-send-buffer-hook nil
   "Hook to run in the Org-mode file before export.")
 
 (defvar org-mime-debug nil
   "Enable debug logger.")
+
 (defvar org-mime-up-subtree-heading 'org-up-heading-safe
-  "Funtion to call before exporting subtree.
+  "Funtion to call before exporting a subtree.
 You could use either `org-up-heading-safe' or `org-back-to-heading'.")
 
 
@@ -176,17 +183,18 @@ You could use either `org-up-heading-safe' or `org-back-to-heading'.")
   str)
 
 (defun org-mime--export-string (s fmt &optional opts)
-  "Export string S into HTML format.  OPTS is export options."
+  "Export string S using FMT as the backend.
+OPTS is export options."
   (let* (rlt
          ;; Emacs 25+ prefer exporting drawer by default
          ;; obviously not acception in exporting to mail body
          (org-export-with-drawers nil))
-    (if org-mime-debug (message "org-mime--export-string called => %s" opts))
+    (when org-mime-debug (message "org-mime--export-string called => %s" opts))
     ;; we won't export title from org file anyway
     (if opts (setq opts (plist-put opts 'title nil)))
     (if (fboundp 'org-export-string-as)
         ;; emacs24.4+
-        (setq rlt (org-export-string-as s fmt t (if org-mime-export-options org-mime-export-options opts)))
+        (setq rlt (org-export-string-as s fmt t (or org-mime-export-options opts)))
       ;; emacs 24.3
       (setq rlt (org-export-string s (symbol-name fmt)))
       ;; manually remove the drawers, see https://github.com/org-mime/org-mime/issues/3
@@ -198,7 +206,8 @@ You could use either `org-up-heading-safe' or `org-back-to-heading'.")
                                                (length rlt))))))
     rlt))
 
-;; example hook, for setting a dark background in <pre style="background-color: #EEE;"> elements
+;; example hook, for setting a dark background in
+;; <pre style="background-color: #EEE;"> elements
 (defun org-mime-change-element-style (element style)
   "Set <ELEMENT> elements in exported html with new default html STYLE."
   (while (re-search-forward (format "<%s" element) nil t)
@@ -221,20 +230,20 @@ You could use either `org-up-heading-safe' or `org-back-to-heading'.")
 
 (defun org-mime-file (ext path id)
   "Markup a file with EXT, PATH and ID for attachment."
-  (if org-mime-debug (message "org-mime-file called => %s %s %s" ext path id))
+  (when org-mime-debug (message "org-mime-file called => %s %s %s" ext path id))
   (cl-case org-mime-library
     (mml (format (concat "<#part type=\"%s\" filename=\"%s\" "
-			  "disposition=inline id=\"<%s>\">\n<#/part>\n")
-		  ext path id))
+			 "disposition=inline id=\"<%s>\">\n<#/part>\n")
+		 ext path id))
     (semi (concat
-            (format (concat "--[[%s\nContent-Disposition: "
-			    "inline;\nContent-ID: <%s>][base64]]\n")
-		    ext id)
-            (base64-encode-string
-             (with-temp-buffer
-               (set-buffer-multibyte nil)
-               (insert-file-contents-literally path)
-               (buffer-string)))))
+	   (format (concat "--[[%s\nContent-Disposition: "
+			   "inline;\nContent-ID: <%s>][base64]]\n")
+		   ext id)
+	   (base64-encode-string
+	    (with-temp-buffer
+	      (set-buffer-multibyte nil)
+	      (insert-file-contents-literally path)
+	      (buffer-string)))))
     (vm "?")))
 
 (defun org-mime-encode-quoted-mail-body ()
@@ -284,7 +293,8 @@ You could use either `org-up-heading-safe' or `org-back-to-heading'.")
     (list b e rlt )))
 
 (defun org-mime-cleanup-quoted (html)
-  "Clean up quoted mail in modern UI style."
+  "Clean up quoted mail in modern UI style.
+HTML is the body of the message."
   (cond
    (org-mime-beautify-quoted-mail
     (let* (info)
@@ -298,7 +308,7 @@ You could use either `org-up-heading-safe' or `org-back-to-heading'.")
             (let (retval)
               (condition-case ex
                   (setq info (org-mime-encode-quoted-mail-body))
-                  (setq retval info)
+		(setq retval info)
                 ('error (setq info nil)))
               retval))
         (cond
@@ -337,23 +347,23 @@ If html portion of message includes IMAGES they are wrapped in multipart/related
 (defun org-mime-replace-images (str current-file)
   "Replace images in STR with cid links.
 CURRENT-FILE is used to calculate full path of images."
-  (if org-mime-debug (message "org-mime-replace-images called => %s" current-file)
-)  (let* (html-images)
+  (when org-mime-debug (message "org-mime-replace-images called => %s" current-file))
+  (let* (html-images)
     (cons
      (replace-regexp-in-string ;; replace images in html
       "src=\"\\([^\"]+\\)\""
       (lambda (text)
-        (format
-         "src=\"cid:%s\""
-         (let* ((url (and (string-match "src=\"\\([^\"]+\\)\"" text)
-                          (match-string 1 text)))
-                (path (if (string-match-p "^file:///" url) (replace-regexp-in-string "^file://" "" url)
-                        (expand-file-name url (file-name-directory current-file))))
-                (ext (file-name-extension path))
-                (id (replace-regexp-in-string "[\/\\\\]" "_" path)))
-           (add-to-list 'html-images
-                        (org-mime-file (concat "image/" ext) path id))
-           id)))
+	(format
+	 "src=\"cid:%s\""
+	 (let* ((url (and (string-match "src=\"\\([^\"]+\\)\"" text)
+			  (match-string 1 text)))
+		(path (if (string-match-p "^file:///" url) (replace-regexp-in-string "^file://" "" url)
+			(expand-file-name url (file-name-directory current-file))))
+		(ext (file-name-extension path))
+		(id (replace-regexp-in-string "[\/\\\\]" "_" path)))
+	   (add-to-list 'html-images
+			(org-mime-file (concat "image/" ext) path id))
+	   id)))
       str)
      html-images)))
 
@@ -363,7 +373,7 @@ CURRENT-FILE is used to calculate full path of images."
 If called with an active region only export that region, otherwise entire body.
 If ARG is not nil, use `org-mime-fixedwith-wrap' to wrap the exported text."
   (interactive "P")
-  (if org-mime-debug (message "org-mime-htmlize called"))
+  (when org-mime-debug (message "org-mime-htmlize called"))
   (let* ((region-p (org-region-active-p))
          (html-start (funcall org-mime-find-html-start
                               (or (and region-p (region-beginning))
@@ -425,8 +435,8 @@ If ARG is not nil, use `org-mime-fixedwith-wrap' to wrap the exported text."
         txt))))
 
 (defun org-mime-compose (body file &optional to subject headers opts)
-  "Create mail BODY in FILE with SUBJECT, HEADERS and OPTS."
-  (if org-mime-debug (message "org-mime-compose called => %s %s" file opts))
+  "Create mail BODY in FILE with TO, SUBJECT, HEADERS and OPTS."
+  (when org-mime-debug (message "org-mime-compose called => %s %s" file opts))
   (let* ((fmt 'html))
     (unless (featurep 'message)
       (require 'message))
@@ -456,7 +466,9 @@ If ARG is not nil, use `org-mime-fixedwith-wrap' to wrap the exported text."
 
 ;;;###autoload
 (defun org-mime-org-buffer-htmlize ()
-  "Create buffer where text encoded in html&org formats as mime alternatives."
+  "Create an email buffer of the current org buffer.
+The email buffer will contain both html and in org formats as mime
+alternatives."
   (interactive)
   (run-hooks 'org-mime-send-buffer-hook)
   (let* ((region-p (org-region-active-p))
@@ -480,9 +492,9 @@ If ARG is not nil, use `org-mime-fixedwith-wrap' to wrap the exported text."
 
 ;;;###autoload
 (defun org-mime-org-subtree-htmlize ()
-  "Create an email buffer containing the current subtree of the
-current org-mode file exported to html and encoded in both html
-and in org formats as mime alternatives."
+  "Create an email buffer of the current subtree.
+The buffer will contain both html and in org formats as mime
+alternatives."
   (interactive)
   (save-excursion
     (funcall org-mime-up-subtree-heading)

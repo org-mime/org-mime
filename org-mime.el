@@ -176,7 +176,9 @@ You could use either `org-up-heading-safe' or `org-back-to-heading'.")
   str)
 
 (defun org-mime--export-string (s fmt &optional opts)
-  "Export string S into HTML format.  OPTS is export options."
+  "Export string S into HTML format.
+FMT defines the backend to use for the export.
+OPTS is export options."
   (let* (rlt
          ;; Emacs 25+ prefer exporting drawer by default
          ;; obviously not acception in exporting to mail body
@@ -284,7 +286,8 @@ You could use either `org-up-heading-safe' or `org-back-to-heading'.")
     (list b e rlt )))
 
 (defun org-mime-cleanup-quoted (html)
-  "Clean up quoted mail in modern UI style."
+  "Clean up quoted mail in modern UI style.
+HTML is the body of the message."
   (cond
    (org-mime-beautify-quoted-mail
     (let* (info)
@@ -298,7 +301,7 @@ You could use either `org-up-heading-safe' or `org-back-to-heading'.")
             (let (retval)
               (condition-case ex
                   (setq info (org-mime-encode-quoted-mail-body))
-                  (setq retval info)
+		(setq retval info)
                 ('error (setq info nil)))
               retval))
         (cond
@@ -425,7 +428,7 @@ If ARG is not nil, use `org-mime-fixedwith-wrap' to wrap the exported text."
         txt))))
 
 (defun org-mime-compose (body file &optional to subject headers opts)
-  "Create mail BODY in FILE with SUBJECT, HEADERS and OPTS."
+  "Create mail BODY in FILE with TO, SUBJECT, HEADERS and OPTS."
   (if org-mime-debug (message "org-mime-compose called => %s %s" file opts))
   (let* ((fmt 'html))
     (unless (featurep 'message)
@@ -480,9 +483,9 @@ If ARG is not nil, use `org-mime-fixedwith-wrap' to wrap the exported text."
 
 ;;;###autoload
 (defun org-mime-org-subtree-htmlize ()
-  "Create an email buffer containing the current subtree of the
-current org-mode file exported to html and encoded in both html
-and in org formats as mime alternatives."
+  "Create an email buffer of the current subtree.
+The buffer will contain both html and in org formats as mime
+alternatives."
   (interactive)
   (save-excursion
     (funcall org-mime-up-subtree-heading)

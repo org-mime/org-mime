@@ -171,7 +171,7 @@ buffer holdin the text to be exported.")
   "Enable debug logger.")
 
 (defvar org-mime-up-subtree-heading 'org-up-heading-safe
-  "Funtion to call before exporting a subtree.
+  "Function to call before exporting a subtree.
 You could use either `org-up-heading-safe' or `org-back-to-heading'.")
 
 
@@ -187,7 +187,7 @@ You could use either `org-up-heading-safe' or `org-back-to-heading'.")
 OPTS is export options."
   (let* (rlt
          ;; Emacs 25+ prefer exporting drawer by default
-         ;; obviously not acception in exporting to mail body
+         ;; obviously not acceptable in exporting to mail body
          (org-export-with-drawers nil))
     (when org-mime-debug (message "org-mime--export-string called => %s" opts))
     ;; we won't export title from org file anyway
@@ -388,8 +388,10 @@ If ARG is not nil, use `org-mime-fixedwith-wrap' to wrap the exported text."
          (header-body (concat org-mime-default-header body))
          (tmp-file (make-temp-name (expand-file-name
                                     "mail" temporary-file-directory)))
-         ;; because we probably don't want to export a huge style file
-         (org-export-htmlize-output-type 'inline-css)
+         ;; this makes the html self-containing.
+         (org-html-htmlize-output-type 'inline-css)
+	 ;; This is an older variable that is not in org 9
+	 (org-export-htmlize-output-type 'inline-css)
          ;; makes the replies with ">"s look nicer
          (org-export-preserve-breaks org-mime-preserve-breaks)
          ;; dvipng for inline latex because MathJax doesn't work in mail
@@ -437,64 +439,121 @@ If ARG is not nil, use `org-mime-fixedwith-wrap' to wrap the exported text."
 (defun org-mime-compose (body file &optional to subject headers opts)
   "Create mail BODY in FILE with TO, SUBJECT, HEADERS and OPTS."
   (when org-mime-debug (message "org-mime-compose called => %s %s" file opts))
-  (let* ((fmt 'html))
+  (let* ((fmt 'html)
+	 ;; we don't want to convert org file links to html
+	 (org-html-link-org-files-as-html nil)
+	 ;; These are file links in the file that are not images.
+	 (files (org-element-map (org-element-parse-buffer) 'link
+		  (lambda (link)
+		    (when (and (string= (org-element-property :type link) "file")
+			       (not (string-match
+				     (cdr (assoc "file" org-html-inline-image-rules))
+				     (org-element-property :path link))))
+		      (org-element-property :path link))))))
     (unless (featurep 'message)
       (require 'message))
     (message-mail to subject headers nil)
     (message-goto-body)
     (cl-labels ((bhook (body fmt)
-                       (let ((hook 'org-mime-pre-html-hook))
-                         (if (> (eval `(length ,hook)) 0)
-                             (with-temp-buffer
-                               (insert body)
-                               (goto-char (point-min))
-                               (eval `(run-hooks ',hook))
-                               (buffer-string))
-                           body))))
+		       (let ((hook 'org-mime-pre-html-hook))
+			 (if (> (eval `(length ,hook)) 0)
+			     (with-temp-buffer
+			       (insert body)
+			       (goto-char (point-min))
+			       (eval `(run-hooks ',hook))
+			       (buffer-string))
+			   body))))
       (let* ((org-link-file-path-type 'absolute)
-             (plain (org-mime--export-string (org-mime--chomp body) 'ascii))
-             ;; we probably don't want to export a huge style file
-             (org-export-htmlize-output-type 'inline-css)
-             (html-and-images
-              (org-mime-replace-images
-               (org-mime--export-string (bhook body 'html) 'html opts)
-               file))
-             (images (cdr html-and-images))
-             (html (org-mime-apply-html-hook (car html-and-images))))
-        (insert (org-mime-multipart plain html)
-                (mapconcat 'identity images "\n"))))))
+	     (plain (org-mime--export-string (org-mime--chomp body) 'ascii))
+	     ;; this makes the html self-containing.
+	     (org-html-htmlize-output-type 'inline-css)
+	     ;; this is an older variable that does not exist in org 9
+	     (org-export-htmlize-output-type 'inline-css)
+	     (html-and-images
+	      (org-mime-replace-images
+	       (org-mime--export-string (bhook body 'html) 'html opts)
+	       file))
+	     (images (cdr html-and-images))
+	     (html (org-mime-apply-html-hook (car html-and-images))))
+	;; If there are files that were attached, we should remove the links,
+	;; and mark them as attachments. The links don't work in the html file.
+	(mapc (lambda (f)
+		(setq html (replace-regexp-in-string
+			    (format "<a href=\"%s\">%s</a>"
+				    (regexp-quote f) (regexp-quote f))
+			    (format "%s (attached)" (file-name-nondirectory f))
+			    html)))
+	      files)
+	(insert (org-mime-multipart plain html)
+		(mapconcat 'identity images "\n"))
+	;; Attach any residual files
+	(mapc (lambda (f)
+		(when org-mime-debug (message "attaching: %s" f))
+		(mml-attach-file f))
+	      files)))))
 
 ;;;###autoload
 (defun org-mime-org-buffer-htmlize ()
   "Create an email buffer of the current org buffer.
 The email buffer will contain both html and in org formats as mime
-alternatives."
+alternatives.
+
+The following file keywords can be used to control the headers:
+#+MAIL_TO: some1@some.place
+#+MAIL_SUBJECT: a subject line
+#+MAIL_CC: some2@some.place
+#+MAIL_BCC: some3@some.place
+
+The cursor ends in the TO field."
   (interactive)
   (run-hooks 'org-mime-send-buffer-hook)
   (let* ((region-p (org-region-active-p))
          (file (buffer-file-name (current-buffer)))
-         (subject (or (org-mime--get-buffer-title)
+	 (keywords (org-element-map (org-element-parse-buffer) 'keyword
+		     (lambda (keyword)
+		       (cons (org-element-property :key keyword)
+			     (org-element-property :value keyword)))))
+	 (subject (or (cdr (assoc "MAIL_SUBJECT" keywords))
+		      (org-mime--get-buffer-title)
                       (if (not file) (buffer-name (buffer-base-buffer))
                         (file-name-sans-extension
                          (file-name-nondirectory file)))))
-         (body-start (or (and region-p (region-beginning))
-                         (save-excursion (goto-char (point-min)))))
-         (body-end (or (and region-p (region-end)) (point-max)))
-         (temp-body-file (make-temp-file "org-mime-export"))
-         (body (buffer-substring body-start body-end)))
-    (org-mime-compose body
-                      file
-                      nil ; TO
-                      subject
-                      nil ; HEADERS (CC, BCC ...)
+	 (to (cdr (assoc "MAIL_TO" keywords)))
+	 (cc (cdr (assoc "MAIL_CC" keywords)))
+	 (bcc (cdr (assoc "MAIL_BCC" keywords)))
+         (other-headers (cond
+			 ((and cc bcc) `((cc . ,cc) (bcc . ,bcc)))
+			 (cc `((cc . ,cc)))
+			 (bcc `((bcc . ,bcc)))
+			 (t nil)))
+	 (buf (org-html-export-as-html
+	       nil nil nil t (or org-mime-export-options opts)))
+         (body (prog1
+		   (with-current-buffer buf
+		     (format "#+BEGIN_EXPORT html\n%s\n#+END_EXPORT"
+			     (buffer-string)))
+		 (kill-buffer buf))))
+    (org-mime-compose body file to subject other-headers
                       (if (fboundp 'org-export--get-inbuffer-options)
-                          (org-export--get-inbuffer-options)))))
+                          (org-export--get-inbuffer-options)))
+    (message-goto-to)))
 
 ;;;###autoload
 (defun org-mime-org-subtree-htmlize ()
   "Create an email buffer of the current subtree.
 The buffer will contain both html and in org formats as mime
-alternatives."
+alternatives.
+
+The following headline properties can determine the headers.
+* subtree heading
+   :PROPERTIES:
+   :MAIL_SUBJECT: mail title
+   :MAIL_TO: person1@gmail.com
+   :MAIL_CC: person2@gmail.com
+   :MAIL_BCC: person3@gmail.com
+   :END:
+
+The cursor is left in the TO field."
   (interactive)
   (save-excursion
     (funcall org-mime-up-subtree-heading)
@@ -504,15 +563,27 @@ alternatives."
              (to (mp "MAIL_TO"))
              (cc (mp "MAIL_CC"))
              (bcc (mp "MAIL_BCC"))
-             ;; Thanks for Matt Price improving handling of cc & bcc headers
+             ;; Thanks to Matt Price for improving handling of cc & bcc headers
              (other-headers (cond
                              ((and cc bcc) `((cc . ,cc) (bcc . ,bcc)))
                              (cc `((cc . ,cc)))
                              (bcc `((bcc . ,bcc)))
                              (t nil)))
-             (opts (if (fboundp 'org-export--get-subtree-options) (org-export--get-subtree-options)))
-             (body (org-get-entry)))
-        (org-mime-compose body file to subject other-headers opts)))))
+             (subtree-opts (when (fboundp 'org-export--get-subtree-options)
+			     (org-export--get-subtree-options)))
+	     (buf (save-restriction
+		    (org-narrow-to-subtree)
+		    (org-html-export-as-html
+		     nil t nil t
+		     (or org-mime-export-options subtree-opts))))
+	     (body (prog1
+		       (with-current-buffer buf
+			 (format "#+BEGIN_EXPORT html\n%s\n#+END_EXPORT"
+				 (buffer-string)))
+		     (kill-buffer buf))))
+	(org-mime-compose body file to subject other-headers
+			  (or org-mime-export-options subtree-opts))
+	(message-goto-to)))))
 
 (provide 'org-mime)
 ;;; org-mime.el ends here

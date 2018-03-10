@@ -171,12 +171,13 @@ buffer holdin the text to be exported.")
   "Enable debug logger.")
 
 (defvar org-mime-up-subtree-heading 'org-up-heading-safe
-  "Funtion to call before exporting a subtree.
+  "Function to call before exporting a subtree.
 You could use either `org-up-heading-safe' or `org-back-to-heading'.")
 
 
 (defun org-mime--chomp (str)
-  "Chomp leading and tailing whitespace from STR."
+  "Chomp leading and trailing whitespace from STR.
+This also chomps multiple line-endings to a single line-ending."
   (while (string-match "\\`[\n\r]+\\|^\\s-+\\|\\s-+$\\|[\n\r]+\\'"
                        str)
     (setq str (replace-match "" t t str)))
@@ -187,7 +188,7 @@ You could use either `org-up-heading-safe' or `org-back-to-heading'.")
 OPTS is export options."
   (let* (rlt
          ;; Emacs 25+ prefer exporting drawer by default
-         ;; obviously not acception in exporting to mail body
+         ;; obviously not acceptable in exporting to mail body
          (org-export-with-drawers nil))
     (when org-mime-debug (message "org-mime--export-string called => %s" opts))
     ;; we won't export title from org file anyway

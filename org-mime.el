@@ -226,25 +226,23 @@ OPTS is export options."
 ;;             (org-mime-change-element-style
 ;;              "pre" (format "color: %s; background-color: %s;"
 ;;                            "#E6E1DC" "#232323"))
-;;       (org-mime-change-class-style
+;;             (org-mime-change-class-style
 ;;              "verse" "border-left: 2px solid gray; padding-left: 4px;")))
 
 (defun org-mime-file (ext path id)
   "Markup a file with EXT, PATH and ID for attachment."
   (when org-mime-debug (message "org-mime-file called => %s %s %s" ext path id))
   (cl-case org-mime-library
-    (mml (format (concat "<#part type=\"%s\" filename=\"%s\" "
-       "disposition=inline id=\"<%s>\">\n<#/part>\n")
-     ext path id))
+    (mml (format "<#part type=\"%s\" filename=\"%s\" disposition=inline id=\"<%s>\">\n<#/part>\n"
+                 ext path id))
     (semi (concat
-     (format (concat "--[[%s\nContent-Disposition: "
-         "inline;\nContent-ID: <%s>][base64]]\n")
-       ext id)
-     (base64-encode-string
-      (with-temp-buffer
-        (set-buffer-multibyte nil)
-        (insert-file-contents-literally path)
-        (buffer-string)))))
+           (format "--[[%s\nContent-Disposition: inline;\nContent-ID: <%s>][base64]]\n"
+                   ext id)
+           (base64-encode-string
+            (with-temp-buffer
+              (set-buffer-multibyte nil)
+              (insert-file-contents-literally path)
+              (buffer-string)))))
     (vm "?")))
 
 (defun org-mime-encode-quoted-mail-body ()
@@ -309,7 +307,7 @@ HTML is the body of the message."
             (let (retval)
               (condition-case ex
                   (setq info (org-mime-encode-quoted-mail-body))
-    (setq retval info)
+                (setq retval info)
                 ('error (setq info nil)))
               retval))
         (cond
@@ -336,13 +334,13 @@ If html portion of message includes IMAGES they are wrapped in multipart/related
                  (when images "<#/multipart>\n")
                  "<#/multipart>\n"))
     (semi (concat
-            "--" "<<alternative>>-{\n"
-            "--" "[[text/plain]]\n" plain
-      (when images (concat "--" "<<alternative>>-{\n"))
-            "--" "[[text/html]]\n"  html
-      images
-      (when images (concat "--" "}-<<alternative>>\n"))
-            "--" "}-<<alternative>>\n"))
+           "--" "<<alternative>>-{\n"
+           "--" "[[text/plain]]\n" plain
+           (when images (concat "--" "<<alternative>>-{\n"))
+           "--" "[[text/html]]\n"  html
+           images
+           (when images (concat "--" "}-<<alternative>>\n"))
+           "--" "}-<<alternative>>\n"))
     (vm "?")))
 
 (defun org-mime-replace-images (str current-file)
@@ -354,17 +352,17 @@ CURRENT-FILE is used to calculate full path of images."
      (replace-regexp-in-string ;; replace images in html
       "src=\"\\([^\"]+\\)\""
       (lambda (text)
-  (format
-   "src=\"cid:%s\""
-   (let* ((url (and (string-match "src=\"\\([^\"]+\\)\"" text)
-        (match-string 1 text)))
-    (path (if (string-match-p "^file:///" url) (replace-regexp-in-string "^file://" "" url)
-      (expand-file-name url (file-name-directory current-file))))
-    (ext (file-name-extension path))
-    (id (replace-regexp-in-string "[\/\\\\]" "_" path)))
-     (add-to-list 'html-images
-      (org-mime-file (concat "image/" ext) path id))
-     id)))
+        (format
+         "src=\"cid:%s\""
+         (let* ((url (and (string-match "src=\"\\([^\"]+\\)\"" text)
+                          (match-string 1 text)))
+                (path (if (string-match-p "^file:///" url) (replace-regexp-in-string "^file://" "" url)
+                        (expand-file-name url (file-name-directory current-file))))
+                (ext (file-name-extension path))
+                (id (replace-regexp-in-string "[\/\\\\]" "_" path)))
+           (add-to-list 'html-images
+                        (org-mime-file (concat "image/" ext) path id))
+           id)))
       str)
      html-images)))
 
@@ -414,7 +412,7 @@ If ARG is not nil, use `org-mime-fixedwith-wrap' to wrap the exported text."
     (save-excursion
       (goto-char html-start)
       (insert (org-mime-multipart
-         body html (mapconcat 'identity html-images "\n"))))))
+               body html (mapconcat 'identity html-images "\n"))))))
 
 (defun org-mime-apply-html-hook (html)
   "Apply HTML hook."

@@ -283,7 +283,7 @@ OPTS is export options."
             (setq lines (split-string s "\n"))
             (dolist (l lines)
               (cond
-               ((string-match "^ *[^ ]*> \\(.*\\)" l)
+               ((string-match "^ *[^ ]*> ?\\(.*\\)" l)
                 (when (not is-quoted)
                   (setq rlt (concat rlt "</p>\n<blockquote class=\"gmail_quote\" style=\"margin:0 0 0 .8ex;border-left:1px #ccc solid;padding-left:1ex\">\n<p>\n"))
                   (setq is-quoted t))

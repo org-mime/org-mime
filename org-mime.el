@@ -301,32 +301,28 @@ OPTS is export options."
 (defun org-mime-cleanup-quoted (html)
   "Clean up quoted mail in modern UI style.
 HTML is the body of the message."
-  (cond
-   (org-mime-beautify-quoted-mail
-    (let* (info)
-      (with-temp-buffer
-        ;; clean title of quoted
-        (insert (replace-regexp-in-string
-                 "<p>[\n\r]*&gt;&gt;&gt;&gt;&gt; .* == \\([^\r\n]*\\)[\r\n]*</p>"
-                 "<div class=\"gmail_quote\">\\1</div>"
-                 html))
-        (unwind-protect
-            (let (retval)
-              (condition-case ex
-                  (setq info (org-mime-encode-quoted-mail-body))
-                (setq retval info)
-                ('error (setq info nil)))
-              retval))
-        (cond
-         (info
-          (delete-region (nth 0 info) (nth 1 info))
-          (goto-char (nth 0 info))
-          (insert (nth 2 info))
-          (buffer-substring-no-properties (point-min) (point-max)))
-         (t
-          html)))))
-   (t
-    html)))
+  (let* (info)
+    (with-temp-buffer
+      ;; clean title of quoted
+      (insert (replace-regexp-in-string
+               "<p>[\n\r]*&gt;&gt;&gt;&gt;&gt; .* == \\([^\r\n]*\\)[\r\n]*</p>"
+               "<div class=\"gmail_quote\">\\1</div>"
+               html))
+      (unwind-protect
+          (let (retval)
+            (condition-case ex
+                (setq info (org-mime-encode-quoted-mail-body))
+              (setq retval info)
+              ('error (setq info nil)))
+            retval))
+      (cond
+       (info
+        (delete-region (nth 0 info) (nth 1 info))
+        (goto-char (nth 0 info))
+        (insert (nth 2 info))
+        (buffer-substring-no-properties (point-min) (point-max)))
+       (t
+        html)))))
 
 (defun org-mime-multipart (plain html &optional images)
   "Markup a multipart/alternative PLAIN with PLAIN and HTML alternatives.
@@ -336,7 +332,9 @@ If html portion of message includes IMAGES they are wrapped in multipart/related
                  plain
                  (when images "<#multipart type=related>")
                  "<#part type=text/html>"
-                 (org-mime-cleanup-quoted html)
+                 (if org-mime-beautify-quoted-mail
+                     (org-mime-cleanup-quoted html)
+                   html)
                  images
                  (when images "<#/multipart>\n")
                  "<#/multipart>\n"))

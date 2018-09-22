@@ -298,7 +298,7 @@ OPTS is export options."
     (setq rlt (concat rlt (if is-quoted "</p>\n</blockquote>\n" "</p>\n")))
     (list b e rlt )))
 
-(defun org-mime-cleanup-quoted (html)
+(defun org-mime-beautify-quoted (html)
   "Clean up quoted mail in modern UI style.
 HTML is the body of the message."
   (let* (info)
@@ -333,7 +333,7 @@ If html portion of message includes IMAGES they are wrapped in multipart/related
                  (when images "<#multipart type=related>")
                  "<#part type=text/html>"
                  (if org-mime-beautify-quoted-mail
-                     (org-mime-cleanup-quoted html)
+                     (org-mime-beautify-quoted html)
                    html)
                  images
                  (when images "<#/multipart>\n")

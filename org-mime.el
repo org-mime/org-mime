@@ -104,7 +104,6 @@
 
 ;;; Code:
 (require 'cl-lib)
-(require 'xml)
 (require 'org)
 (require 'ox-org)
 

@@ -104,7 +104,6 @@
 
 ;;; Code:
 (require 'cl-lib)
-(require 'xml)
 (require 'org)
 (require 'ox-org)
 
@@ -252,81 +251,36 @@ OPTS is export options."
               (buffer-string)))))
     (vm "?")))
 
-(defun org-mime-encode-quoted-mail-body ()
-  "Please note quoted mail body could be with reply."
-  (let* ((b (save-excursion
-              (goto-char (point-min))
-              (search-forward-regexp "^[^ ]*&gt; ")
-              (search-backward-regexp "<p>")
-              (line-beginning-position)))
-         (e (save-excursion
-              (goto-char (point-max))
-              (search-backward-regexp "^[^ ]*&gt; ")
-              (search-forward-regexp "</p>")
-              (line-end-position)))
-         (str (format "<div>%s</div>" (buffer-substring-no-properties b e)))
-         (paragraphs (xml-node-children (car (with-temp-buffer
-                                               (insert str)
-                                               (xml--parse-buffer nil nil)))))
-         (is-quoted t)
-         lines
-         (rlt "<blockquote class=\"gmail_quote\" style=\"margin:0 0 0 .8ex;border-left:1px #ccc solid;padding-left:1ex\">\n<p>\n"))
-    (dolist (p paragraphs)
-      (when (and p (> (length p) 2))
-        (dolist (s p)
-          (when (and s
-                     (not (eq s 'p))
-                     (not (consp s))
-                     (not (string= s "\n")))
-            ;; trim string
-            (setq s (replace-regexp-in-string "\\`[ \t\n]*" "" (replace-regexp-in-string "[ \t\n]*\\'" "" s)))
-            (setq lines (split-string s "\n"))
-            (dolist (l lines)
-              (cond
-               ((string-match "^ *[^ ]*> ?\\(.*\\)" l)
-                (when (not is-quoted)
-                  (setq rlt (concat rlt "</p>\n<blockquote class=\"gmail_quote\" style=\"margin:0 0 0 .8ex;border-left:1px #ccc solid;padding-left:1ex\">\n<p>\n"))
-                  (setq is-quoted t))
-                (setq rlt (concat rlt (match-string 1 l) "<br />\n")))
-               ((string= l "")
-                (set rlt (concat rlt "<br />")))
-               (t
-                (when is-quoted
-                  (setq rlt (concat rlt "</p>\n</blockquote>\n<p>\n"))
-                  (setq is-quoted nil))
-                (setq rlt (concat rlt l "\n")))))))))
-    (setq rlt (concat rlt (if is-quoted "</p>\n</blockquote>\n" "</p>\n")))
-    (list b e rlt )))
-
-(defun org-mime-cleanup-quoted (html)
+(defun org-mime-beautify-quoted (html)
   "Clean up quoted mail in modern UI style.
 HTML is the body of the message."
-  (cond
-   (org-mime-beautify-quoted-mail
-    (let* (info)
-      (with-temp-buffer
-        ;; clean title of quoted
-        (insert (replace-regexp-in-string
-                 "<p>[\n\r]*&gt;&gt;&gt;&gt;&gt; .* == \\([^\r\n]*\\)[\r\n]*</p>"
-                 "<div class=\"gmail_quote\">\\1</div>"
-                 html))
-        (unwind-protect
-            (let (retval)
-              (condition-case ex
-                  (setq info (org-mime-encode-quoted-mail-body))
-                (setq retval info)
-                ('error (setq info nil)))
-              retval))
+  (let ((quote-depth 0)
+        (line-depth 0)
+        (quote-opening "<blockquote class=\"gmail_quote\" style=\"margin:0 0 0 .8ex;border-left:1px #ccc solid;padding-left:1ex\">\n<p>\n")
+        (quote-closing "</p>\n</blockquote>\n"))
+    (with-temp-buffer
+      ;; clean title of quoted
+      (insert (replace-regexp-in-string
+               "<p>[\n\r]*&gt;&gt;&gt;&gt;&gt; .* == \\([^\r\n]*\\)[\r\n]*</p>"
+               "<div class=\"gmail_quote\">\\1</div>"
+               html))
+      (goto-char (point-min))
+      (while (not (eobp))
+        (setq line-depth 0)
+        (while (looking-at "&gt;[ \t]*")
+          (replace-match "")
+          (cl-incf line-depth))
         (cond
-         (info
-          (delete-region (nth 0 info) (nth 1 info))
-          (goto-char (nth 0 info))
-          (insert (nth 2 info))
-          (buffer-substring-no-properties (point-min) (point-max)))
-         (t
-          html)))))
-   (t
-    html)))
+         ((< quote-depth line-depth)
+          (while (< quote-depth line-depth)
+            (insert quote-opening)
+            (cl-incf quote-depth)))
+         ((> quote-depth line-depth)
+          (while (> quote-depth line-depth)
+            (insert quote-closing)
+            (cl-decf quote-depth))))
+        (forward-line))
+      (buffer-substring (point-min) (point-max)))))
 
 (defun org-mime-multipart (plain html &optional images)
   "Markup a multipart/alternative PLAIN with PLAIN and HTML alternatives.
@@ -336,7 +290,9 @@ If html portion of message includes IMAGES they are wrapped in multipart/related
                  plain
                  (when images "<#multipart type=related>")
                  "<#part type=text/html>"
-                 (org-mime-cleanup-quoted html)
+                 (if org-mime-beautify-quoted-mail
+                     (org-mime-beautify-quoted html)
+                   html)
                  images
                  (when images "<#/multipart>\n")
                  "<#/multipart>\n"))

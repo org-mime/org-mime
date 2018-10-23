@@ -517,7 +517,8 @@ The following file keywords can be used to control the headers:
 The cursor ends in the TO field."
   (interactive)
   (run-hooks 'org-mime-send-buffer-hook)
-  (let* ((region-p (org-region-active-p))
+  (let* ((org-html-klipsify-src nil)
+         (region-p (org-region-active-p))
          (file (buffer-file-name (current-buffer)))
          (keywords (org-mime-extract-keywords))
          (subject (or (cdr (assoc "MAIL_SUBJECT" keywords))

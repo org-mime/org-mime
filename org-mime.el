@@ -644,15 +644,19 @@ The cursor is left in the TO field."
 	     ;; exposed depending on the backend.
 	     (org-body (prog1
 			   (with-current-buffer org-buf
-			     (format "#+BEGIN_EXPORT org\n%s\n#+END_EXPORT"
-				     (buffer-string)))
+			     ;; (format "#+BEGIN_EXPORT org\n%s\n#+END_EXPORT"
+				   ;;   (buffer-string))
+           (buffer-string))
 			 (kill-buffer org-buf)))
 	     (html-body (prog1
 			    (with-current-buffer html-buf
 			      (format "#+BEGIN_EXPORT html\n%s\n#+END_EXPORT"
-				      (buffer-string)))
+				      (buffer-string))
+            ;; (buffer-string)
+            )
 			  (kill-buffer html-buf)))
-	     (body (concat org-body "\n" html-body)))
+	     ;; (body (concat org-body "\n" html-body))
+       (body org-body))
 	(save-restriction
 	  (org-narrow-to-subtree)
 	  (org-mime-compose body file to subject other-headers

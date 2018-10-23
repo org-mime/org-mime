@@ -572,14 +572,15 @@ The cursor ends in the TO field."
 			 (cc `((cc . ,cc)))
 			 (bcc `((bcc . ,bcc)))
 			 (t nil)))
-	 (buf (org-html-export-as-html
-	       nil nil nil t (or org-mime-export-options
-				 (org-export--get-inbuffer-options))))
-         (body (prog1
-		   (with-current-buffer buf
-		     (format "#+BEGIN_EXPORT html\n%s\n#+END_EXPORT"
-			     (buffer-string)))
-		 (kill-buffer buf))))
+	 ;; (buf (org-html-export-as-html
+	 ;;       nil nil nil t (or org-mime-export-options
+	 ;;  		 (org-export--get-inbuffer-options))))
+   ;; (body (prog1
+	 ;;     (with-current-buffer buf
+	 ;;       (format "#+BEGIN_EXPORT html\n%s\n#+END_EXPORT"
+	 ;;  	     (buffer-string)))
+	 ;;   (kill-buffer buf)))
+   (body (buffer-string)))
     (org-mime-compose body file to subject other-headers
 		      (or org-mime-export-options
 			  (when (fboundp 'org-export--get-inbuffer-options)

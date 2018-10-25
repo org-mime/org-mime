@@ -585,6 +585,12 @@ The cursor ends in the TO field."
 	 ;;  	     (buffer-string)))
 	 ;;   (kill-buffer buf)))
    (body (buffer-string)))
+    (if (eq org-mime-library 'mu4e)
+        (advice-add 'mu4e~switch-back-to-mu4e-buffer :after
+                    `(lambda ()
+                       (switch-to-buffer (get-buffer ,(buffer-name) ))
+                       (advice-remove 'mu4e~switch-back-to-mu4e-buffer "om-temp-advice"))
+                    '((name . "om-temp-advice"))))
     (org-mime-compose body file to subject other-headers
 		      (or org-mime-export-options
 			  (when (fboundp 'org-export--get-inbuffer-options)
@@ -666,6 +672,12 @@ The cursor is left in the TO field."
 	  (org-narrow-to-subtree)
 	  (org-mime-compose body file to subject other-headers
 			    (or org-mime-export-options subtree-opts)))
+        (if (eq org-mime-library 'mu4e)
+        (advice-add 'mu4e~switch-back-to-mu4e-buffer :after
+                    `(lambda ()
+                       (switch-to-buffer (get-buffer ,(buffer-name) ))
+                       (advice-remove 'mu4e~switch-back-to-mu4e-buffer "om-temp-advice"))
+                    '((name . "om-temp-advice"))))
 	(message-goto-to)))))
 
 (provide 'org-mime)

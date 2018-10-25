@@ -128,7 +128,7 @@ And ensure first line isn't assumed to be a title line."
 (defcustom org-mime-library 'mml
   "Library to use for marking up MIME elements."
   :group 'org-mime
-  :type '(choice 'mml 'semi 'vm))
+  :type '(choice 'mml 'semi 'vm 'mu4e))
 
 (defcustom org-mime-preserve-breaks t
   "Temporary value of `org-export-preserve-breaks' during mime encoding."
@@ -234,9 +234,9 @@ OPTS is export options."
   "Markup a file with EXT, PATH and ID for attachment."
   (when org-mime-debug (message "org-mime-file called => %s %s %s" ext path id))
   (cl-case org-mime-library
-    (mml (format (concat "<#part type=\"%s\" filename=\"%s\" "
-			 "disposition=inline id=\"<%s>\">\n<#/part>\n")
-		 ext path id))
+    ((or  mml mu4e) (format (concat "<#part type=\"%s\" filename=\"%s\" "
+			                      "disposition=inline id=\"<%s>\">\n<#/part>\n")
+		                ext path id))
     (semi (concat
 	   (format (concat "--[[%s\nContent-Disposition: "
 			   "inline;\nContent-ID: <%s>][base64]]\n")
@@ -328,14 +328,14 @@ HTML is the body of the message."
   "Markup a multipart/alternative PLAIN with PLAIN and HTML alternatives.
 If html portion of message includes IMAGES they are wrapped in multipart/related part."
   (cl-case org-mime-library
-    (mml (concat "<#multipart type=alternative><#part type=text/plain>"
-                 plain
-                 (when images "<#multipart type=related>")
-                 "<#part type=text/html>"
-                 (org-mime-cleanup-quoted html)
-                 images
-                 (when images "<#/multipart>\n")
-                 "<#/multipart>\n"))
+    ((or mu4e  mml) (concat "<#multipart type=alternative><#part type=text/plain>"
+                    plain
+                    (when images "<#multipart type=related>")
+                    "<#part type=text/html>"
+                    (org-mime-cleanup-quoted html)
+                    images
+                    (when images "<#/multipart>\n")
+                    "<#/multipart>\n"))
     (semi (concat
             "--" "<<alternative>>-{\n"
             "--" "[[text/plain]]\n" plain
@@ -494,7 +494,11 @@ If ARG is not nil, use `org-mime-fixedwith-wrap' to wrap the exported text."
 	    '())))
     (unless (featurep 'message)
       (require 'message))
-    (message-mail to subject headers nil)
+    (cl-case org-mime-library
+      (mu4e
+       (mu4e~compose-mail to subject headers nil))
+      (t
+       (message-mail to subject headers nil)))
     (message-goto-body)
     (cl-labels ((bhook (body fmt)
 		       (let ((hook 'org-mime-pre-html-hook))

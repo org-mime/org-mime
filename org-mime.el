@@ -680,5 +680,66 @@ The cursor is left in the TO field."
                     '((name . "om-temp-advice"))))
 	(message-goto-to)))))
 
+
+
+(defun org-mime-html-paragraph (paragraph contents info)
+  "Transcode a PARAGRAPH element from Org to HTML.
+CONTENTS is the contents of the paragraph, as a string.  INFO is
+the plist used as a communication channel."
+  (message "%s" contents)
+  (let* ((parent (org-export-get-parent paragraph))
+	 (parent-type (org-element-type parent))
+	 (style '((footnote-definition " class=\"footpara\"")
+		  (org-data " class=\"footpara\"")))
+	 (attributes (org-html--make-attribute-string
+		      (org-export-read-attribute :attr_html paragraph)))
+	 (extra (or (cadr (assq parent-type style)) "")))
+    
+    (cond
+     ((and (eq parent-type 'item)
+	   (not (org-export-get-previous-element paragraph info))
+	   (let ((followers (org-export-get-next-element paragraph info 2)))
+	     (and (not (cdr followers))
+		  (memq (org-element-type (car followers)) '(nil plain-list)))))
+      ;; First paragraph in an item has no tag if it is alone or
+      ;; followed, at most, by a sub-list.
+      contents)
+     ((org-html-standalone-image-p paragraph info)
+      ;; Standalone image.
+      (let ((caption
+	     (let ((raw (org-export-data
+			 (org-export-get-caption paragraph) info))
+		   (org-html-standalone-image-predicate
+		    #'org-html--has-caption-p))
+	       (if (not (org-string-nw-p raw)) raw
+		 (concat "<span class=\"figure-number\">"
+			 (format (org-html--translate "Figure %d:" info)
+				 (org-export-get-ordinal
+				  (org-element-map paragraph 'link
+				    #'identity info t)
+				  info nil #'org-html-standalone-image-p))
+			 " </span>"
+			 raw))))
+	    (label (and (org-element-property :name paragraph)
+			(org-export-get-reference paragraph info))))
+	(org-html--wrap-image contents info caption label)))
+     ;; Regular paragraph.
+     ((string-match "^\\(>\\|&gt;\\)" contents)
+      (progn 
+        (message "ORG-MIME: found a quote")
+        (org-html-quote-block paragraph contents info)))
+     (t (format "<p%s%s>\n%s</p>"
+		(if (org-string-nw-p attributes)
+		    (concat " " attributes) "")
+		extra contents)))))
+
+
+(org-export-define-derived-backend 'htmlmail 'html
+  :translate-alist
+  '(
+    (paragraph . org-mime-html-paragraph)
+      ) )
+
+
 (provide 'org-mime)
 ;;; org-mime.el ends here

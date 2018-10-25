@@ -424,7 +424,8 @@ If ARG is not nil, use `org-mime-fixedwith-wrap' to wrap the exported text."
          (html-and-images
           (org-mime-replace-images
            (org-mime--export-string header-body
-                                    'html
+                                    ;;'html
+                                    'htmlmail
                                     (if (fboundp 'org-export--get-inbuffer-options)
                                         (org-export--get-inbuffer-options)))
            tmp-file))

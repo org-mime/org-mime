@@ -6,7 +6,7 @@
 ;; Maintainer: Chen Bin (redguardtoo)
 ;; Keywords: mime, mail, email, html
 ;; Homepage: http://github.com/org-mime/org-mime
-;; Version: 0.1.1
+;; Version: 0.1.2
 ;; Package-Requires: ((emacs "24.4") (cl-lib "0.5"))
 
 ;; This file is not part of GNU Emacs.
@@ -162,7 +162,7 @@ This could be used for example to post-process html elements.")
 (defvar org-mime-pre-html-hook nil
   "Hook to run before html export.
 Functions should take no arguments and will be run in a
-buffer holdin the text to be exported.")
+buffer holding the text to be exported.")
 
 (defvar org-mime-send-buffer-hook nil
   "Hook to run in the Org-mode file before export.")
@@ -461,24 +461,22 @@ If called with an active region only export that region, otherwise entire body."
   "Create mail BODY in FILE with TO, SUBJECT, HEADERS.
 If SUBTREEP is t, curret org node is subtree."
   ;; start composing mail
-  (unless (featurep 'message)
-    (require 'message))
-  (message-mail to subject headers nil)
-  (message-goto-body)
-
-  ;; insert text
-  (let* ((str (with-temp-buffer
+  (let* ((export-opts (org-mime-get-export-options subtreep))
+         str)
+    (unless (featurep 'message)
+      (require 'message))
+    (message-mail to subject headers nil)
+    (message-goto-body)
+    (setq str (with-temp-buffer
                 (insert body)
                 (goto-char (point-min))
                 (run-hooks 'org-mime-pre-html-hook)
-                (buffer-string))))
-    (org-mime-insert-html-content body
-                                  file
-                                  str
-                                  (org-mime-get-export-options subtreep))))
+                (buffer-string)))
+    ;; insert text
+    (org-mime-insert-html-content body file str export-opts)))
 
 (defun org-mime-extract-keywords ()
-  "Extract keyword from "
+  "Extract keywords."
   (cond
    ((>= (org-mime-org-major-version) 9)
     (org-element-map (org-element-parse-buffer) 'keyword

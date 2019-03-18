@@ -6,7 +6,7 @@
 ;; Maintainer: Chen Bin (redguardtoo)
 ;; Keywords: mime, mail, email, html
 ;; Homepage: http://github.com/org-mime/org-mime
-;; Version: 0.1.2
+;; Version: 0.1.3
 ;; Package-Requires: ((emacs "24.4") (cl-lib "0.5"))
 
 ;; This file is not part of GNU Emacs.
@@ -187,16 +187,14 @@ You could use either `org-up-heading-safe' or `org-back-to-heading'.")
         (if (fboundp 'org-export--get-inbuffer-options)
             (org-export--get-inbuffer-options))))))
 
-(defun org-mime-get-exported-content (fmt subtreep)
+(defun org-mime-get-exported-content (subtreep)
   "Similar to `org-html-export-as-html' and `org-org-export-as-org'.
-FMT is either 'org or 'html.
 SUBTREEP is t if current node is subtree."
-  (let* ((buf (org-export-to-buffer fmt "*Org Mime Export*"
+  (let* ((buf (org-export-to-buffer 'html "*Org Mime Export*"
                 nil subtreep nil (org-mime-get-export-options subtreep)))
          (body (prog1
                    (with-current-buffer buf
-                     (format "#+BEGIN_EXPORT %s\n%s\n#+END_EXPORT"
-                             (symbol-name fmt)
+                     (format "#+BEGIN_EXPORT html\n%s\n#+END_EXPORT"
                              (buffer-string)))
                  (kill-buffer buf))))
     body))
@@ -282,12 +280,11 @@ HTML is the body of the message."
         (forward-line))
       (buffer-substring (point-min) (point-max)))))
 
-(defun org-mime-multipart (plain html &optional images)
-  "Markup a multipart/alternative PLAIN with PLAIN and HTML alternatives.
+(defun org-mime-multipart (html &optional images)
+  "Markup a multipart/alternative with HTML alternatives.
 If html portion of message includes IMAGES they are wrapped in multipart/related part."
   (cl-case org-mime-library
-    (mml (concat "<#multipart type=alternative><#part type=text/plain>"
-                 plain
+    (mml (concat "<#multipart type=alternative>"
                  (when images "<#multipart type=related>")
                  "<#part type=text/html>"
                  (if org-mime-beautify-quoted-mail
@@ -298,7 +295,6 @@ If html portion of message includes IMAGES they are wrapped in multipart/related
                  "<#/multipart>\n"))
     (semi (concat
            "--" "<<alternative>>-{\n"
-           "--" "[[text/plain]]\n" plain
            (when images (concat "--" "<<alternative>>-{\n"))
            "--" "[[text/html]]\n"  html
            images
@@ -373,7 +369,6 @@ CURRENT-FILE is used to calculate full path of images."
          (org-link-file-path-type 'absolute)
          ;; makes the replies with ">"s look nicer
          (org-export-preserve-breaks org-mime-preserve-breaks)
-         (plain (org-mime--export-string body 'org))
          ;; org 9
          (org-html-htmlize-output-type 'inline-css)
          ;; org 8
@@ -394,9 +389,7 @@ CURRENT-FILE is used to calculate full path of images."
                           html)))
             files))
 
-    (insert (org-mime-multipart plain
-                                html
-                                (mapconcat 'identity images "\n")))
+    (insert (org-mime-multipart html (mapconcat 'identity images "\n")))
 
     ;; Attach any residual files
     (when files
@@ -524,12 +517,12 @@ The cursor ends in the TO field."
                       (if (not file) (buffer-name (buffer-base-buffer))
                         (file-name-sans-extension
                          (file-name-nondirectory file)))))
-         (body (org-mime-get-exported-content 'html nil))
+         (html-body (org-mime-get-exported-content nil))
          (to (cdr (assoc "MAIL_TO" keywords)))
          (cc (cdr (assoc "MAIL_CC" keywords)))
          (bcc (cdr (assoc "MAIL_BCC" keywords)))
          (other-headers (org-mime-build-mail-other-headers cc bcc)))
-    (org-mime-compose body file to subject other-headers nil)
+    (org-mime-compose html-body file to subject other-headers nil)
     (message-goto-to)))
 
 (defun org-mime-org-major-version ()
@@ -572,16 +565,12 @@ The cursor is left in the TO field."
              ;; I wrap these bodies in export blocks because in org-mime-compose
              ;; they get exported again. This makes each block conditionally
              ;; exposed depending on the backend.
-             (org-body (save-restriction
-                        (org-narrow-to-subtree)
-                        (org-mime-get-exported-content 'org t)))
              (html-body (save-restriction
                          (org-narrow-to-subtree)
-                         (org-mime-get-exported-content 'html t)))
-             (body (concat org-body "\n" html-body)))
+                         (org-mime-get-exported-content t))))
         (save-restriction
           (org-narrow-to-subtree)
-          (org-mime-compose body file to subject other-headers t))
+          (org-mime-compose html-body file to subject other-headers t))
         (message-goto-to)))))
 
 (provide 'org-mime)

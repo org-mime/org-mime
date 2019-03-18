@@ -66,8 +66,24 @@
       (org-mime-org-subtree-htmlize)
       (switch-to-buffer (car (message-buffers)))
       (setq str (buffer-string)))
-    (should (string-match "^\* world" str))
     (should (string-match "Subject: hello" str))
+    (should (string-match "<#multipart" str))))
+
+(ert-deftest test-org-mime-org-buffer-htmlize ()
+  (let* (str opts)
+    (with-temp-buffer
+      (insert "* hello\n"
+              "** world\n"
+              "#+begin_src javascript\n"
+              "console.log('hello world');"
+              "#+end_src\n")
+      (org-mode)
+      (goto-char (point-min))
+      (setq opts (org-mime-get-export-options t))
+      (should opts)
+      (org-mime-org-buffer-htmlize)
+      (switch-to-buffer (car (message-buffers)))
+      (setq str (buffer-string)))
     (should (string-match "<#multipart" str))))
 
 (ert-run-tests-batch-and-exit)

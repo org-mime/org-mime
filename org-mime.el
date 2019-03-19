@@ -42,13 +42,10 @@
 ;; encoding.
 ;;
 ;; `org-mime-org-subtree-htmlize' is similar to `org-mime-org-buffer-htmlize'
-;; but works on a subtree. It can also read the following subtree properties:
-;; MAIL_SUBJECT, MAIL_TO, MAIL_CC, and MAIL_BCC. Note the behavior of this is
-;; controlled by `org-mime-up-subtree-heading'. The default is to go up to the
-;; heading containing the current subtree.
-
-;; Here is the sample of a subtree:
+;; but works on current subtree. It can read following subtree properties:
+;; MAIL_SUBJECT, MAIL_TO, MAIL_CC, and MAIL_BCC.
 ;;
+;; Here is the sample of a subtree:
 ;; * mail one
 ;;   :PROPERTIES:
 ;;   :MAIL_SUBJECT: mail title
@@ -104,6 +101,7 @@
 
 ;;; Code:
 (require 'cl-lib)
+(require 'outline)
 (require 'org)
 (require 'ox-org)
 
@@ -170,11 +168,6 @@ buffer holding the text to be exported.")
 (defvar org-mime-debug nil
   "Enable debug logger.")
 
-(defvar org-mime-up-subtree-heading 'org-up-heading-safe
-  "Function to call before exporting a subtree.
-You could use either `org-up-heading-safe' or `org-back-to-heading'.")
-
-
 (defun org-mime-get-export-options (subtreep)
   "SUBTREEP is t if current node is subtree."
   (cond
@@ -186,6 +179,11 @@ You could use either `org-up-heading-safe' or `org-back-to-heading'.")
     (or org-mime-export-options
         (if (fboundp 'org-export--get-inbuffer-options)
             (org-export--get-inbuffer-options))))))
+
+(defun org-mime-current-line ()
+  "Get current line"
+  (buffer-substring-no-properties (line-beginning-position)
+                                  (line-end-position)))
 
 (defun org-mime-get-exported-content (subtreep)
   "Similar to `org-html-export-as-html' and `org-org-export-as-org'.
@@ -529,32 +527,40 @@ The cursor ends in the TO field."
   "Get Org major version."
   (string-to-number (car (split-string (org-release) "\\."))))
 
-;; TODO integrating patch
+(defun org-mime-attr (p)
+  (org-entry-get nil p org-mime-use-property-inheritance))
+
 ;;;###autoload
-(defun org-mime-org-subtree-htmlize ()
-  "Create an email buffer of the current subtree.
-The buffer will contain both html and in org formats as mime
-alternatives.
+(defun org-mime-org-subtree-htmlize (&optional htmlize-first-level)
+  "Create an email buffer of the current subtree.  If HTMLIZE-FIRST-LEVEL is
+not nil, the first level subtree which containing current subtree is htmlized.
 
-The following headline properties can determine the headers.
+Following headline properties can determine the mail headers,
 * subtree heading
-   :PROPERTIES:
-   :MAIL_SUBJECT: mail title
-   :MAIL_TO: person1@gmail.com
-   :MAIL_CC: person2@gmail.com
-   :MAIL_BCC: person3@gmail.com
-   :END:
-
-The cursor is left in the TO field."
-  (interactive)
+  :PROPERTIES:
+  :MAIL_SUBJECT: mail title
+  :MAIL_TO: person1@gmail.com
+  :MAIL_CC: person2@gmail.com
+  :MAIL_BCC: person3@gmail.com
+  :END:
+"
+  (interactive "P")
   (save-excursion
-    (funcall org-mime-up-subtree-heading)
-    (cl-flet ((mp (p) (org-entry-get nil p org-mime-use-property-inheritance)))
+    (org-back-to-heading)
+
+    (when (and htmlize-first-level
+               (not (string-match "^\\* " (org-mime-current-line))))
+      ;; go back to the 1st level substree
+      (re-search-backward "^\\* ")
+      (org-back-to-heading))
+
+    (when (outline-on-heading-p nil)
       (let* ((file (buffer-file-name (current-buffer)))
-             (subject (or (mp "MAIL_SUBJECT") (nth 4 (org-heading-components))))
-             (to (mp "MAIL_TO"))
-             (cc (mp "MAIL_CC"))
-             (bcc (mp "MAIL_BCC"))
+             (subject (or (org-mime-attr "MAIL_SUBJECT")
+                          (nth 4 (org-heading-components))))
+             (to (org-mime-attr "MAIL_TO"))
+             (cc (org-mime-attr "MAIL_CC"))
+             (bcc (org-mime-attr "MAIL_BCC"))
              ;; Thanks to Matt Price improving handling of cc & bcc headers
              (other-headers (org-mime-build-mail-other-headers cc bcc))
              (org-export-show-temporary-export-buffer nil)
@@ -565,9 +571,8 @@ The cursor is left in the TO field."
              ;; I wrap these bodies in export blocks because in org-mime-compose
              ;; they get exported again. This makes each block conditionally
              ;; exposed depending on the backend.
-             (html-body (save-restriction
-                         (org-narrow-to-subtree)
-                         (org-mime-get-exported-content t))))
+             (html-body (save-restriction (org-narrow-to-subtree)
+                                          (org-mime-get-exported-content t))))
         (save-restriction
           (org-narrow-to-subtree)
           (org-mime-compose html-body file to subject other-headers t))

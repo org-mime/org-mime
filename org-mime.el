@@ -6,7 +6,7 @@
 ;; Maintainer: Chen Bin (redguardtoo)
 ;; Keywords: mime, mail, email, html
 ;; Homepage: http://github.com/org-mime/org-mime
-;; Version: 0.1.3
+;; Version: 0.1.4
 ;; Package-Requires: ((emacs "24.4") (cl-lib "0.5"))
 
 ;; This file is not part of GNU Emacs.
@@ -387,7 +387,8 @@ CURRENT-FILE is used to calculate full path of images."
                           html)))
             files))
 
-    (insert (org-mime-multipart html (mapconcat 'identity images "\n")))
+    (when images
+      (insert (org-mime-multipart html (mapconcat 'identity images "\n"))))
 
     ;; Attach any residual files
     (when files

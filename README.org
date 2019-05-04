@@ -1,4 +1,4 @@
-* org-mime v0.1.5
+* org-mime v0.1.6
 
 [[https://travis-ci.org/org-mime/org-mime][https://travis-ci.org/org-mime/org-mime.svg?branch=master]]
 [[http://melpa.org/#/org-mime][file:http://melpa.org/packages/org-mime-badge.svg]] [[http://stable.melpa.org/#/org-mime][file:http://stable.melpa.org/packages/org-mime-badge.svg]]

@@ -148,7 +148,7 @@ And ensure first line isn't assumed to be a title line."
   :group 'org-mime
   :type 'sexp)
 
-(defvar org-mime-export-options nil
+(defvar org-mime-export-options '(:with-latex dvipng)
   "Default export options which may overrides org buffer/subtree options.
 You avoid exporting section-number/author/toc with the setup below,
 `(setq org-mime-export-options '(:section-numbers nil :with-author nil :with-toc nil))'")

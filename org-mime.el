@@ -482,20 +482,12 @@ If SUBTREEP is t, curret org node is subtree."
 
 (defun org-mime-build-mail-other-headers (cc bcc from)
   "Build mail header from CC, BCC, and FROM."
-  (cond
-   ((and cc bcc from)
-    (list (cons "Cc" cc)
-          (cons "Bcc" bcc)
-          (cons "From" from)
-          ))
-   (cc
-    (list (cons "Cc" cc)))
-   (bcc
-    (list (cons "Bcc" bcc)))
-   (from
-    (list (cons "From" from)))
-   (t
-    nil)))
+  (let* ((arr (list (cons "Cc" cc) (cons "Bcc" bcc)  (cons "From" from )))
+         rlt)
+    (dolist (e arr)
+      (when (cdr e)
+        (push e rlt)))
+    rlt))
 
 ;;;###autoload
 (defun org-mime-org-buffer-htmlize ()

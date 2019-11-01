@@ -26,7 +26,7 @@ Screenshot:
 ** =M-x org-mime-htmlize=
 =M-x org-mime-htmlize=  from within a mail composition buffer to export either the entire buffer or just the active region to html, and embed the results into the buffer as a text/html mime section.
 
-Export a portion of an email body composed using `mml-mode' to html using `org-mode'.  If called with an active region only export that region, otherwise export the entire body.
+Export a portion of an email body composed using =mml-mode= to html using =org-mode=.  If called with an active region only export that region, otherwise export the entire body.
 
 Warning: There has been some concern voiced over the potential complexity of email resulting from calling this function on an active region resulting in multiple =multipart/alternative= sections in the same email. Please see [[http://thread.gmane.org/gmane.emacs.orgmode/23617][this email thread]] for a discussion of the potential pitfalls of this approach. Speaking from personal experience this has not been a problem for the author.
 
@@ -68,7 +68,7 @@ Use below syntax,
 ** CSS style customization
 Email clients will often strip all global CSS from email messages. In the case of web-based email readers this is essential in order to protect the CSS of the containing web site. To ensure that your CSS styles are rendered correctly they must be included in the actual body of the elements to which they apply.
 
-The `org-mime-html-hook' allows for the insertion of these important CSS elements into the resulting HTML before mime encoding. The following are some possible uses of this hook.
+The =org-mime-html-hook= allows for the insertion of these important CSS elements into the resulting HTML before mime encoding. The following are some possible uses of this hook.
 
 For those who use color themes with Dark backgrounds it is useful to set a dark background for all exported code blocks and example regions. This can be accomplished with the following,
 
@@ -86,7 +86,7 @@ For those who use color themes with Dark backgrounds it is useful to set a dark 
              "blockquote" "border-left: 2px solid gray; padding-left: 4px;")))
 #+end_src
 
-Render text between "@" in red color, you can use `org-mime-html-hook',
+Render text between "@" in red color, you can use =org-mime-html-hook=,
 #+begin_src elisp
 (add-hook 'org-mime-html-hook
           (lambda ()
@@ -97,7 +97,7 @@ For other customization options see the org-mime customization group.
 ** Beautify quoted mail when replying
 It already works out of box. Currently it emulate Gmail's style. You can go back the old Gnus style by =(setq org-mime-beautify-quoted-mail nil)=.
 ** Export options
-To avoid exporting TOC, you can setup `org-mime-export-options',
+To avoid exporting TOC, you can setup =org-mime-export-options=,
 #+begin_src elisp
 (setq org-mime-export-options '(:section-numbers nil
                                 :with-author nil
@@ -105,7 +105,11 @@ To avoid exporting TOC, you can setup `org-mime-export-options',
 #+end_src
 Or just setup your export options in org buffer/subtree.
 
-`org-mime-export-options' will override your export options if it's NOT nil.
+=org-mime-export-options= will override your export options if it's NOT nil.
+** Latex export problem
+Please double check your org and latex setup. See [[https://github.com/org-mime/org-mime/issues/33]] for technical details.
+
+You can also modify the variable  =org-mime-org-html-with-latex-default=.
 ** Keep gpg signatures outside of multipart
 =org-mime-find-html-start= gives user a chance to tweak the region beginning to htmlize,
 #+begin_src lisp

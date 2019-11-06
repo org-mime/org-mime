@@ -110,6 +110,13 @@ Or just setup your export options in org buffer/subtree.
 Please double check your org and latex setup. See [[https://github.com/org-mime/org-mime/issues/33]] for technical details.
 
 You can also modify the variable  =org-mime-org-html-with-latex-default=.
+
+** The exported HTML is wrong
+Please note this program can only embed exported HTML into mail. Org-mode is responsible for rendering HTML.
+
+One issue of org-mode is [[https://github.com/org-mime/org-mime/issues/38][unwanted numbers in displaymath and equation]].
+
+Thibault Marin provided [[https://lists.gnu.org/archive/html/emacs-orgmode/2019-11/msg00016.html][a patch to fix the org-mode]].
 ** Keep gpg signatures outside of multipart
 =org-mime-find-html-start= gives user a chance to tweak the region beginning to htmlize,
 #+begin_src lisp

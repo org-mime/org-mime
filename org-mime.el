@@ -465,8 +465,7 @@ If SUBTREEP is t, curret org node is subtree."
          (plain (cdr exported))
          (export-opts (org-mime-get-export-options subtreep))
          patched-html)
-    (unless (featurep 'message) (require 'message))
-    (message-mail to subject headers nil)
+    (compose-mail to subject headers nil)
     (message-goto-body)
     (setq patched-html (with-temp-buffer
                          (insert html)

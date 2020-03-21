@@ -127,6 +127,25 @@ Thibault Marin provided [[https://lists.gnu.org/archive/html/emacs-orgmode/2019-
           (search-forward "<#secure method=pgpmime mode=sign>")
           (+ (point) 1))))
 #+end_src
+** ASCII export options for text/plain
+Use =org-mime-export-ascii= to export the org-mode file as ASCII for the
+=text/plain= section of the email message. The default is to export the
+original unmodified org-mode file.
+
+ASCII export options:
+- plain text
+    #+begin_src elisp
+(setq org-mime-export-ascii 'ascii)
+    #+end_src
+- latin1
+    #+begin_src elisp
+(setq org-mime-export-ascii 'latin1)
+    #+end_src
+- utf-8
+    #+begin_src elisp
+(setq org-mime-export-ascii 'utf-8)
+    #+end_src
+
 * Development
 - Patches are always welcomed
 - You can =(setq org-mime-debug t)= to enable the log

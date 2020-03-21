@@ -136,6 +136,12 @@ And ensure first line isn't assumed to be a title line."
   :group 'org-mime
   :type '(choice 'mml 'semi 'vm))
 
+(defcustom org-mime-export-ascii nil
+  "ASCII export options for text/plain.
+Default (nil) selects the original org-mode file."
+  :group 'org-mime
+  :type '(choice 'ascii 'latin1 'utf-8))
+
 (defcustom org-mime-preserve-breaks t
   "Temporary value of `org-export-preserve-breaks' during mime encoding."
   :group 'org-mime
@@ -197,7 +203,15 @@ buffer holding the text to be exported.")
 (defun org-mime-export-buffer-or-subtree (subtreep)
   "Similar to `org-html-export-as-html' and `org-org-export-as-org'.
 SUBTREEP is t if current node is subtree."
-  (let* ((plain (buffer-string))
+  (let* (
+         (plain
+          (cl-case org-mime-export-ascii
+            (ascii (org-export-string-as (buffer-string) 'ascii nil '(:ascii-charset ascii)))
+            (latin1 (org-export-string-as (buffer-string) 'ascii nil '(:ascii-charset latin1)))
+            (utf-8 (org-export-string-as (buffer-string) 'ascii nil '(:ascii-charset utf-8)))
+            (t (buffer-string)) ;; default is the original org file
+           )
+          )
          (buf (org-export-to-buffer 'html "*Org Mime Export*"
                 nil subtreep nil (org-mime-get-export-options subtreep)))
          (body (prog1
@@ -290,7 +304,7 @@ HTML is the body of the message."
   "Markup a multipart/alternative with HTML alternatives.
 If html portion of message includes IMAGES they are wrapped in multipart/related part."
   (cl-case org-mime-library
-    (mml (concat "<#multipart type=alternative>\n<#part type=text/plain>"
+    (mml (concat "<#multipart type=alternative>\n<#part type=text/plain>\n"
                  plain
                  (when images "<#multipart type=related>")
                  "<#part type=text/html>"

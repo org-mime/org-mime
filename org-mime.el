@@ -204,14 +204,14 @@ buffer holding the text to be exported.")
   "Similar to `org-html-export-as-html' and `org-org-export-as-org'.
 SUBTREEP is t if current node is subtree."
   (let* (
-         (plain
-          (cl-case org-mime-export-ascii
-            (ascii (org-export-string-as (buffer-string) 'ascii nil '(:ascii-charset ascii)))
-            (latin1 (org-export-string-as (buffer-string) 'ascii nil '(:ascii-charset latin1)))
-            (utf-8 (org-export-string-as (buffer-string) 'ascii nil '(:ascii-charset utf-8)))
-            (t (buffer-string)) ;; default is the original org file
-           )
-          )
+         (plain (cl-case org-mime-export-ascii
+                  (ascii (org-export-string-as (buffer-string)
+                           'ascii nil '(:ascii-charset ascii)))
+                  (latin1 (org-export-string-as (buffer-string)
+                            'ascii nil '(:ascii-charset latin1)))
+                  (utf-8 (org-export-string-as (buffer-string)
+                           'ascii nil '(:ascii-charset utf-8)))
+                  (t (buffer-string)))) ;; original org file
          (buf (org-export-to-buffer 'html "*Org Mime Export*"
                 nil subtreep nil (org-mime-get-export-options subtreep)))
          (body (prog1
@@ -307,7 +307,7 @@ If html portion of message includes IMAGES they are wrapped in multipart/related
     (mml (concat "<#multipart type=alternative>\n<#part type=text/plain>\n"
                  plain
                  (when images "<#multipart type=related>")
-                 "<#part type=text/html>"
+                 "<#part type=text/html>\n"
                  (if org-mime-beautify-quoted-mail
                      (org-mime-beautify-quoted html)
                    html)

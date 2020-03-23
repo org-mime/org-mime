@@ -114,4 +114,43 @@
    (should (string= (car h) "Cc"))
    (should (string= (cdr h) cc))))
 
+;;; The ASCII export test checks for org-mode markup for the default case, where
+;;; the export variable is nil or not valid, and checks for absent org-mode
+;;; markup for the three valid plain text exports. The ASCII export test does
+;;; not attempt to verify the exported coding type.
+
+(ert-deftest test-org-mime-org-buffer-htmlize-ascii-plain-text ()
+  (let* (str opts)
+    (setq orgBuf (generate-new-buffer "*org-mode-test-buf*"))
+    (with-current-buffer orgBuf
+      (insert "#+OPTIONS: toc:nil num:nil\n"
+              "\n#+begin_example\n"
+              "$ echo nothing to see here\n"
+              "#+end_example\n")
+      (org-mode)
+      (goto-char (point-min))
+      (setq opts (org-mime-get-export-options t))
+      (should opts)
+      ;; default: org-mode file
+      (mapcar (lambda (backend)
+                (setq org-mime-export-ascii backend)
+                (switch-to-buffer orgBuf)
+                (org-mime-org-buffer-htmlize)
+                (switch-to-buffer (car (message-buffers)))
+                (setq str (buffer-string))
+                (should (string-match "<#multipart" str))
+                (should (string-match "#\\+begin_example" str)))
+                '(nil bogus))
+      ;; 'ascii, 'latin1, and 'utf-8 exports
+      (mapcar (lambda (backend)
+                (setq org-mime-export-ascii backend)
+                (switch-to-buffer orgBuf)
+                (org-mime-org-buffer-htmlize)
+                (switch-to-buffer (car (message-buffers)))
+                (setq str (buffer-string))
+                (should (string-match "<#multipart" str))
+                (should-not (string-match "#\\+begin_example" str)))
+                '(ascii latin1 utf-8)))
+    (kill-buffer orgBuf)))
+
 (ert-run-tests-batch-and-exit)

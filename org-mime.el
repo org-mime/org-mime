@@ -164,7 +164,7 @@ Default (nil) selects the original org-mode file."
   :type 'sexp)
 
 (defvar org-mime-export-options '(:with-latex dvipng)
-  "Default export options which may overrides org buffer/subtree options.
+  "Default export options which may override org buffer/subtree options.
 You avoid exporting section-number/author/toc with the setup below,
 `(setq org-mime-export-options '(:section-numbers nil :with-author nil :with-toc nil))'")
 
@@ -200,20 +200,23 @@ buffer holding the text to be exported.")
   (buffer-substring-no-properties (line-beginning-position)
                                   (line-end-position)))
 
+(defun org-mime-use-ascii-charset ()
+  "Return nil unless org-mime-export-ascii is set to a valid value."
+  (car (memq org-mime-export-ascii '(ascii utf-8 latin1))))
+
 (defun org-mime-export-buffer-or-subtree (subtreep)
   "Similar to `org-html-export-as-html' and `org-org-export-as-org'.
 SUBTREEP is t if current node is subtree."
   (let* (
-         (plain (cl-case org-mime-export-ascii
-                  (ascii (org-export-string-as (buffer-string)
-                           'ascii nil '(:ascii-charset ascii)))
-                  (latin1 (org-export-string-as (buffer-string)
-                            'ascii nil '(:ascii-charset latin1)))
-                  (utf-8 (org-export-string-as (buffer-string)
-                           'ascii nil '(:ascii-charset utf-8)))
-                  (t (buffer-string)))) ;; original org file
+         (ascii-charset (org-mime-use-ascii-charset))
+         (opts (org-mime-get-export-options subtreep))
+         (plain (if ascii-charset
+                    (progn
+                      (setq org-ascii-charset ascii-charset)
+                      (org-export-string-as (buffer-string) 'ascii nil opts))
+                  (buffer-string)))
          (buf (org-export-to-buffer 'html "*Org Mime Export*"
-                nil subtreep nil (org-mime-get-export-options subtreep)))
+                nil subtreep nil opts))
          (body (prog1
                    (with-current-buffer buf
                      (buffer-string))
@@ -438,11 +441,17 @@ If called with an active region only export that region, otherwise entire body."
          (html-end (or (and region-p (region-end))
                        ;; TODO: should catch signature...
                        (point-max)))
-         (plain (buffer-substring html-start html-end))
+         (org-text (buffer-substring html-start html-end))
 ;; to hold attachments for inline html images
          (opts (if (fboundp 'org-export--get-inbuffer-options)
                    (org-export--get-inbuffer-options)))
-         (html (org-mime-export-string (concat org-mime-default-header plain) opts))
+         (ascii-charset (org-mime-use-ascii-charset))
+         (plain (if ascii-charset
+                    (progn
+                      (setq org-ascii-charset ascii-charset)
+                      (org-export-string-as (concat org-mime-default-header org-text) 'ascii nil opts))
+                  org-text))
+         (html (org-mime-export-string (concat org-mime-default-header org-text) opts))
          (file (make-temp-name (expand-file-name
                                 "mail" temporary-file-directory))))
 

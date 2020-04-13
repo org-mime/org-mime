@@ -42,7 +42,7 @@
       (insert "* hello\n"
               "** world\n"
               "#+begin_src javascript\n"
-              "console.log('hello world');"
+              "console.log('hello world');\n"
               "#+end_src\n")
       (apply #'insert mail-footer)
       (message-mode)
@@ -57,7 +57,7 @@
       (insert "* hello\n"
               "** world\n"
               "#+begin_src javascript\n"
-              "console.log('hello world');"
+              "console.log('hello world');\n"
               "#+end_src\n")
       (org-mode)
       (goto-char (point-min))
@@ -75,7 +75,7 @@
       (insert "* hello\n"
               "** world\n"
               "#+begin_src javascript\n"
-              "console.log('hello world');"
+              "console.log('hello world');\n"
               "#+end_src\n")
       (org-mode)
       (goto-char (point-min))
@@ -114,13 +114,13 @@
    (should (string= (car h) "Cc"))
    (should (string= (cdr h) cc))))
 
-;;; The ASCII export test checks for org-mode markup for the default case, where
-;;; the export variable is nil or not valid, and checks for absent org-mode
-;;; markup for the three valid plain text exports. The ASCII export test does
-;;; not attempt to verify the exported coding type.
+;;; The two ASCII export tests below check for org-mode markup for the default
+;;; case, where the export variable is nil or not valid, and check for absent
+;;; org-mode markup for the three valid plain text exports. The ASCII export
+;;; tests do not attempt to verify the exported coding type.
 
 (ert-deftest test-org-mime-org-buffer-htmlize-ascii-plain-text ()
-  (let* (str opts)
+  (let (str opts)
     (setq orgBuf (generate-new-buffer "*org-mode-test-buf*"))
     (with-current-buffer orgBuf
       (insert "#+OPTIONS: toc:nil num:nil\n"
@@ -131,7 +131,6 @@
       (goto-char (point-min))
       (setq opts (org-mime-get-export-options t))
       (should opts)
-      ;; default: org-mode file
       (mapcar (lambda (backend)
                 (setq org-mime-export-ascii backend)
                 (switch-to-buffer orgBuf)
@@ -139,18 +138,112 @@
                 (switch-to-buffer (car (message-buffers)))
                 (setq str (buffer-string))
                 (should (string-match "<#multipart" str))
-                (should (string-match "#\\+begin_example" str)))
-                '(nil bogus))
-      ;; 'ascii, 'latin1, and 'utf-8 exports
-      (mapcar (lambda (backend)
-                (setq org-mime-export-ascii backend)
-                (switch-to-buffer orgBuf)
-                (org-mime-org-buffer-htmlize)
-                (switch-to-buffer (car (message-buffers)))
+                (if (car (memq backend '(ascii latin1 utf-8)))
+                    (should-not (string-match "#\\+begin_example" str))
+                  (should (string-match "#\\+begin_example" str))))
+                '(nil bogus ascii latin1 utf-8)))
+    (kill-buffer orgBuf)))
+
+(ert-deftest test-org-mime-htmlize-ascii-plain-text ()
+  (let (str)
+    (mapcar (lambda (backend)
+              (setq org-mime-export-ascii backend)
+              (with-temp-buffer
+                (apply #'insert mail-header)
+                (insert "#+OPTIONS: toc:nil num:nil\n"
+                        "\n#+begin_example\n"
+                        "$ echo nothing to see here\n"
+                        "#+end_example\n")
+                (apply #'insert mail-footer)
+                (message-mode)
+                (goto-char (point-min))
+                (org-mime-htmlize)
                 (setq str (buffer-string))
                 (should (string-match "<#multipart" str))
-                (should-not (string-match "#\\+begin_example" str)))
-                '(ascii latin1 utf-8)))
+                (if (car (memq backend '(ascii latin1 utf-8)))
+                    (should-not (string-match "#\\+begin_example" str))
+                  (should (string-match "#\\+begin_example" str)))))
+            '(nil bogus ascii latin1 utf-8))))
+
+;; The two ASCII export tests below check subtree export options for the utf-8
+;; ascii export. In the first test we include the Title, Table of Contents, and
+;; Author as defined in the subtree properties. In the second test, we omit the
+;; Title, TOC, and Author.
+
+(ert-deftest test-org-mime-org-subtree-htmlize-ascii-opts-t ()
+  (let (str opts)
+    (setq org-mime-export-options nil) ;; allow subtree properties
+    (setq org-mime-export-ascii 'utf-8)
+    (setq orgBuf (generate-new-buffer "*org-mode-test-buf*"))
+    (with-current-buffer orgBuf
+      ;; the initial options are ignored in favor of subtree options
+      (insert "#+OPTIONS: toc:nil author:nil title:nil\n"
+              "#+AUTHOR: Anon\n"
+              "* Section 1\n"
+              "SECTION_ONE\n"
+              "* Section 2\n"
+              ":PROPERTIES:\n"
+              ":EXPORT_OPTIONS: toc:t author:t title:t\n"
+              ":EXPORT_AUTHOR: Alfred E. Neuman:t\n"
+              ":END:\n"
+              "\n#+begin_example\n"
+              "$ echo nothing to see here\n"
+              "#+end_example\n")
+      (org-mode)
+      (switch-to-buffer orgBuf)
+      ;; export subtree for Section 2
+      (goto-char (point-min))
+      (search-forward "Section 2")
+      (goto-char (+ 1 (point)))
+      (org-mime-org-subtree-htmlize)
+      (switch-to-buffer (car (message-buffers)))
+      (setq str (buffer-string))
+      (setq case-fold-search nil) ;; match case for string-match
+      (should-not (string-match "#\\+begin_example" str))
+      (should (string-match "<#multipart" str))
+      (should (string-match "Subject: Section 2" str))
+      (should (string-match "SECTION 2" str))
+      (should (string-match "Alfred E. Neuman" str))
+      (should (string-match "Table of Contents" str))
+      (should-not (string-match "SECTION_ONE" str)))
+    (kill-buffer orgBuf)))
+
+(ert-deftest test-org-mime-org-subtree-htmlize-ascii-opts-nil ()
+  (let (str opts)
+    (setq org-mime-export-options nil) ;; allow subtree properties
+    (setq org-mime-export-ascii 'utf-8)
+    (setq orgBuf (generate-new-buffer "*org-mode-test-buf*"))
+    (with-current-buffer orgBuf
+      ;; the initial options are ignored in favor of subtree options
+      (insert "#+OPTIONS: toc:t author:t title:t\n"
+              "#+AUTHOR: Anon\n"
+              "* Section 1\n"
+              "SECTION_ONE\n"
+              "* Section 2\n"
+              ":PROPERTIES:\n"
+              ":EXPORT_OPTIONS: toc:nil author:nil title:nil\n"
+              ":EXPORT_AUTHOR: Alfred E. Neuman:t\n"
+              ":END:\n"
+              "\n#+begin_example\n"
+              "$ echo nothing to see here\n"
+              "#+end_example\n")
+      (org-mode)
+      (switch-to-buffer orgBuf)
+      ;; export subtree for Section 2
+      (goto-char (point-min))
+      (search-forward "Section 2")
+      (goto-char (+ 1 (point)))
+      (org-mime-org-subtree-htmlize)
+      (switch-to-buffer (car (message-buffers)))
+      (setq str (buffer-string))
+      (setq case-fold-search nil) ;; match case for string-match
+      (should-not (string-match "#\\+begin_example" str))
+      (should (string-match "<#multipart" str))
+      (should (string-match "Subject: Section 2" str))
+      (should-not (string-match "SECTION 2" str))
+      (should-not (string-match "Alfred E. Neuman" str))
+      (should-not (string-match "Table of Contents" str))
+      (should-not (string-match "SECTION_ONE" str)))
     (kill-buffer orgBuf)))
 
 (ert-run-tests-batch-and-exit)

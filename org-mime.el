@@ -449,7 +449,7 @@ If called with an active region only export that region, otherwise entire body."
          (plain (if ascii-charset
                     (progn
                       (setq org-ascii-charset ascii-charset)
-                      (org-export-string-as (buffer-string) 'ascii nil opts))
+                      (org-export-string-as org-text 'ascii nil opts))
                   org-text))
          (html (org-mime-export-string (concat org-mime-default-header org-text) opts))
          (file (make-temp-name (expand-file-name

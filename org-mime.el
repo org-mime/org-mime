@@ -6,8 +6,8 @@
 ;; Maintainer: Chen Bin (redguardtoo)
 ;; Keywords: mime, mail, email, html
 ;; Homepage: http://github.com/org-mime/org-mime
-;; Version: 0.1.6
-;; Package-Requires: ((emacs "24.4") (cl-lib "0.5"))
+;; Version: 0.1.7
+;; Package-Requires: ((emacs "25.1") (cl-lib "0.5"))
 
 ;; This file is not part of GNU Emacs.
 

@@ -146,6 +146,8 @@ ASCII export options:
 (setq org-mime-export-ascii 'utf-8)
     #+end_src
 
+* Support legacy Emacs versions
+- 0.1.6 is the last version to support Emacs 24
 * Development
 - Patches are always welcomed
 - You can =(setq org-mime-debug t)= to enable the log

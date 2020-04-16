@@ -240,7 +240,6 @@
       (should-not (string-match "#\\+begin_example" str))
       (should (string-match "<#multipart" str))
       (should (string-match "Subject: Section 2" str))
-      (should-not (string-match "SECTION 2" str))
       (should-not (string-match "Alfred E. Neuman" str))
       (should-not (string-match "Table of Contents" str))
       (should-not (string-match "SECTION_ONE" str)))

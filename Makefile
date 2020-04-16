@@ -12,4 +12,4 @@ clean:
 
 # Run tests.
 test: clean
-	$(EMACS) -batch -Q -l org-mime.el -l test/org-mime-tests.el
+	$(EMACS) -batch -Q -l org-mime.el -l test/htmlize.el -l test/org-mime-tests.el

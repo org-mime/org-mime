@@ -6,7 +6,7 @@
 ;; Maintainer: Chen Bin (redguardtoo)
 ;; Keywords: mime, mail, email, html
 ;; Homepage: http://github.com/org-mime/org-mime
-;; Version: 0.1.7
+;; Version: 0.2.0
 ;; Package-Requires: ((emacs "25.1") (cl-lib "0.5"))
 
 ;; This file is not part of GNU Emacs.
@@ -67,8 +67,11 @@
 ;;
 ;; Quick start:
 ;; Write a message in message-mode, make sure the mail body follows
-;; org format. Before sending mail, run `M-x org-mime-htmlize' to convert the
-;; body to html, then send the mail as usual.
+;; org format. Run `org-mime-edit-mail-in-org-mode' to edit mail
+;; in a special edit with `org-mode'.
+;; Run `org-mime-htmlize' to convert the plain text mail to html mail.
+;; Run `org-mime-revert-to-plain-text-mail' if you want to restore to
+;; plain text mail.
 ;;
 ;; Setup (OPTIONAL):
 ;; You might want to bind this to a key with something like the
@@ -182,6 +185,13 @@ buffer holding the text to be exported.")
 
 (defvar org-mime-debug nil
   "Enable debug logger.")
+
+;; internal variables
+(defvar org-mime-src--overlay nil)
+(defvar org-mime-src--beg-marker nil)
+(defvar org-mime-src--end-marker nil)
+(defvar org-mime--saved-temp-window-config nil)
+(defconst org-mime-src--hint "## org-mime hint: Press C-c C-c to commit change.\n")
 
 (defun org-mime-get-export-options (subtreep)
   "SUBTREEP is t if current node is subtree."
@@ -425,6 +435,13 @@ CURRENT-FILE is used to calculate full path of images."
               (mml-attach-file f))
             files))))
 
+(defun org-mime-mail-body-begin ()
+  "Get begin of mail body."
+  (save-excursion
+    (goto-char (point-min))
+    (search-forward mail-header-separator)
+    (+ (point) 1)))
+
 ;;;###autoload
 (defun org-mime-htmlize ()
   "Export a portion of an email to html using `org-mode'.
@@ -434,10 +451,7 @@ If called with an active region only export that region, otherwise entire body."
   (let* ((region-p (org-region-active-p))
          (html-start (funcall org-mime-find-html-start
                               (or (and region-p (region-beginning))
-                                  (save-excursion
-                                    (goto-char (point-min))
-                                    (search-forward mail-header-separator)
-                                    (+ (point) 1)))))
+                                  (org-mime-mail-body-begin))))
          (html-end (or (and region-p (region-end))
                        ;; TODO: should catch signature...
                        (point-max)))
@@ -609,6 +623,159 @@ Following headline properties can determine the mail headers,
           (org-narrow-to-subtree)
           (org-mime-compose exported file to subject other-headers t))
         (message-goto-to)))))
+
+(defun org-mime-src--remove-overlay ()
+  "Remove overlay from current source buffer."
+  (message "org-mime-src--remove-overlay called overlay=%s p=%s" org-mime-src--overlay (overlayp org-mime-src--overlay))
+  (when (overlayp org-mime-src--overlay)
+    (delete-overlay org-mime-src--overlay)))
+
+(defun org-mime-edited-code ()
+  "Get edited code."
+  (save-excursion
+    (goto-char (point-min))
+    (search-forward org-mime-src--hint (point-max) t)
+    (goto-char (line-beginning-position))
+    (buffer-substring-no-properties (point) (point-max))))
+
+(defun org-mime-edit-src-save ()
+  "Save parent buffer with current state source-code buffer."
+  (interactive)
+  (set-buffer-modified-p nil)
+  (let* ((edited-code (org-mime-edited-code))
+         (beg org-mime-src--beg-marker)
+         (end org-mime-src--end-marker)
+         (overlay org-mime-src--overlay))
+    (with-current-buffer (marker-buffer org-mime-src--beg-marker)
+      (undo-boundary)
+      (goto-char beg)
+      ;; Temporarily disable read-only features of OVERLAY in order to
+      ;; insert new contents.
+      (delete-overlay overlay)
+      (delete-region beg end)
+      (let* ((expecting-bol (bolp)))
+        (insert edited-code)
+        (when (and expecting-bol (not (bolp))) (insert "\n")))
+      (save-buffer)
+      (move-overlay overlay beg (point))))
+  ;; `write-contents-functions' requires the function to return
+  ;; a non-nil value so that other functions are not called.
+  t)
+
+(defun org-mime-src-mode-configure-edit-buffer ()
+  (add-hook 'kill-buffer-hook #'org-mime-src--remove-overlay nil 'local)
+  (setq buffer-offer-save t)
+  (setq-local write-contents-functions '(org-mime-edit-src-save)))
+
+(defvar org-mime-src-mode-hook nil
+  "Hook run after switching embedded org code to its `org-mode'.")
+
+(defun org-mime-edit-src-exit ()
+  "Kill current sub-editing buffer and return to source buffer."
+  (interactive)
+  (let* ((beg org-mime-src--beg-marker)
+         (end org-mime-src--end-marker)
+         (edit-buffer (current-buffer))
+         (source-buffer (marker-buffer beg)))
+    (org-mime-edit-src-save)
+    (unless source-buffer (error "Source buffer disappeared.  Aborting"))
+    ;; Insert modified code.  Ensure it ends with a newline character.
+    (message "=====edit-buffer=%s" edit-buffer)
+    (kill-buffer edit-buffer)
+
+    ;; to the beginning of the block opening line.
+    (goto-char beg)
+
+    ;; Clean up left-over markers and restore window configuration.
+    (set-marker beg nil)
+    (set-marker end nil)
+    (when org-mime--saved-temp-window-config
+      (set-window-configuration org-mime--saved-temp-window-config)
+      (setq org-mime--saved-temp-window-config nil))))
+
+(defvar org-mime-src-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-c") 'org-mime-edit-src-exit)
+    (define-key map (kbd "C-x C-s") 'org-mime-edit-src-save)
+    map))
+
+(define-minor-mode org-mime-src-mode
+  "Minor mode for org major mode buffers generated from mail body."
+  nil " OrgMimeSrc" nil
+  )
+(add-hook 'org-mime-src-mode-hook #'org-mime-src-mode-configure-edit-buffer)
+
+(defun org-mime-src--make-source-overlay (beg end)
+  "Create overlay between BEG and END positions and return it."
+  (let* ((overlay (make-overlay beg end)))
+    (overlay-put overlay 'face 'secondary-selection)
+    (let ((read-only
+           (list
+            (lambda (&rest _)
+              (user-error
+               "Cannot modify an area being edited in a dedicated buffer")))))
+      (overlay-put overlay 'modification-hooks read-only)
+      (overlay-put overlay 'insert-in-front-hooks read-only)
+      (overlay-put overlay 'insert-behind-hooks read-only))
+    overlay))
+
+(defun org-mime-edit-mail-in-org-mode ()
+  "Call a special editor to edit the mail body in `org-mode'."
+  (interactive)
+  ;; see `org-src--edit-element'
+  (cond
+   ((eq major-mode 'org-mode)
+    (message "This command is not for `org-mode'."))
+   (t
+    (setq org-mime--saved-temp-window-config (current-window-configuration))
+    (let* ((beg (copy-marker (org-mime-mail-body-begin)))
+           (end (copy-marker (point-max)))
+           (bufname "OrgMimeMailBody")
+           (buffer (generate-new-buffer bufname))
+           (overlay (org-mime-src--make-source-overlay beg end))
+           (text (buffer-substring-no-properties beg end)))
+
+      (setq org-mime-src--beg-marker beg)
+      (setq org-mime-src--end-marker end)
+      ;; don't use local-variable because only user can't edit multiple emails
+      ;; or multiple embedded org code in one mail
+      (setq org-mime-src--overlay overlay)
+
+      (save-excursion
+        (delete-other-windows)
+        (org-switch-to-buffer-other-window buffer)
+        (erase-buffer)
+        (insert org-mime-src--hint)
+        (insert text)
+        (goto-char (point-min))
+        (org-mode)
+        (org-mime-src-mode))))))
+
+(defun org-mime-revert-to-plain-text-mail ()
+  "Revert mail body to plain text "
+  (interactive)
+  (let* ((txt-sep "<#part type=text/plain")
+         (html-sep "<#part type=text/html>")
+         mail-beg
+         mail-text
+         txt-beg
+         txt-end)
+    (save-excursion
+      (goto-char (point-min))
+      (setq mail-beg (search-forward mail-header-separator (point-max) t))
+      (setq txt-beg (search-forward txt-sep (point-max) t))
+      (setq txt-end (search-forward html-sep (point-max) t)))
+    (cond
+     ((and mail-beg txt-beg txt-end (< mail-beg txt-beg txt-end))
+      ;; extract text mail
+      (setq mail-text (buffer-substring-no-properties txt-beg
+                                                      (- txt-end (length html-sep))))
+      ;; delete html mail
+      (delete-region mail-beg (point-max))
+      ;; restore text mail
+      (insert mail-text))
+     (t
+      (message "Can not find plain text mail.")))))
 
 (provide 'org-mime)
 ;; Local Variables:

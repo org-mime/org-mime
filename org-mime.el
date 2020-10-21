@@ -166,6 +166,11 @@ Default (nil) selects the original org-mode file."
   :group 'org-mime
   :type 'sexp)
 
+(defcustom org-mime-mail-signature-separator "--"
+  "Default mail signature separator."
+  :group 'org-mime
+  :type 'string)
+
 (defvar org-mime-export-options '(:with-latex dvipng)
   "Default export options which may override org buffer/subtree options.
 You avoid exporting section-number/author/toc with the setup below,
@@ -442,6 +447,12 @@ CURRENT-FILE is used to calculate full path of images."
     (search-forward mail-header-separator)
     (+ (point) 1)))
 
+(defun org-mime-mail-signature-begin ()
+  "Find start of signature line in email."
+  (save-excursion
+    (goto-char (point-max))
+    (search-backward org-mime-mail-signature-separator nil t nil)))
+
 ;;;###autoload
 (defun org-mime-htmlize ()
   "Export a portion of an email to html using `org-mode'.
@@ -453,8 +464,9 @@ If called with an active region only export that region, otherwise entire body."
                               (or (and region-p (region-beginning))
                                   (org-mime-mail-body-begin))))
          (html-end (or (and region-p (region-end))
-                       ;; TODO: should catch signature...
-                       (point-max)))
+                       (or
+                        (org-mime-mail-signature-begin)
+                        (point-max))))
          (org-text (buffer-substring html-start html-end))
 ;; to hold attachments for inline html images
          (opts (if (fboundp 'org-export--get-inbuffer-options)

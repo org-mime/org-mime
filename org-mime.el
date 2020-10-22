@@ -166,7 +166,7 @@ Default (nil) selects the original org-mode file."
   :group 'org-mime
   :type 'sexp)
 
-(defcustom org-mime-mail-signature-separator "--"
+(defcustom org-mime-mail-signature-separator "^--"
   "Default mail signature separator."
   :group 'org-mime
   :type 'string)
@@ -451,7 +451,7 @@ CURRENT-FILE is used to calculate full path of images."
   "Find start of signature line in email."
   (save-excursion
     (goto-char (point-max))
-    (search-backward org-mime-mail-signature-separator nil t nil)))
+    (re-search-backward org-mime-mail-signature-separator nil t nil)))
 
 ;;;###autoload
 (defun org-mime-htmlize ()

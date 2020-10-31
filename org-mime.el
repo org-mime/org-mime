@@ -166,7 +166,7 @@ Default (nil) selects the original org-mode file."
   :group 'org-mime
   :type 'sexp)
 
-(defcustom org-mime-mail-signature-separator "^--"
+(defcustom org-mime-mail-signature-separator "^--\s?$"
   "Default mail signature separator."
   :group 'org-mime
   :type 'string)

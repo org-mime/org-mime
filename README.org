@@ -149,6 +149,14 @@ ASCII export options:
 (setq org-mime-export-ascii 'utf-8)
     #+end_src
 
+** Prompt for confirmation if message has no HTML
+
+If you plan to run =org-mime-htmlize= on all your email, you may want a confirmation if it appears you're sending an email without multipart content. To do this, add a hook to =message-send-hook= to your init file:
+
+#+begin_src elisp
+(add-hook 'message-send-hook 'org-mime-confirm-when-no-multipart)
+#+end_src
+
 * Support legacy Emacs versions
 - 0.1.6 is the last version to support Emacs 24
 * Development

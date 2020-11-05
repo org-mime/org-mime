@@ -788,6 +788,18 @@ Following headline properties can determine the mail headers,
      (t
       (message "Can not find plain text mail.")))))
 
+(defun org-mime-confirm-when-no-multipart ()
+  "Prompts whether to send email if the buffer does not seem to be html-ized"
+  (let ((found-multipart (save-excursion
+                           (save-restriction
+                             (widen)
+                             (goto-char (point-min))
+                             (search-forward "<#multipart type=alternative>" nil t)))))
+    (when (and (not found-multipart)
+               (not (y-or-n-p "org-mime-htmlize not called; send anyway?")))
+      (setq quit-flag t))))
+
+
 (provide 'org-mime)
 ;; Local Variables:
 ;; coding: utf-8

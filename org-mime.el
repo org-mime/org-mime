@@ -6,7 +6,7 @@
 ;; Maintainer: Chen Bin (redguardtoo)
 ;; Keywords: mime, mail, email, html
 ;; Homepage: http://github.com/org-mime/org-mime
-;; Version: 0.2.0
+;; Version: 0.2.1
 ;; Package-Requires: ((emacs "25.1") (cl-lib "0.5"))
 
 ;; This file is not part of GNU Emacs.
@@ -42,7 +42,7 @@
 ;; encoding.
 ;;
 ;; `org-mime-org-subtree-htmlize' is similar to `org-mime-org-buffer-htmlize'
-;; but works on current subtree. It can read following subtree properties:
+;; but works on current subtree.  It can read following subtree properties:
 ;; MAIL_SUBJECT, MAIL_TO, MAIL_FROM, MAIL_CC, and MAIL_BCC.
 ;;
 ;; Here is the sample of a subtree:
@@ -61,13 +61,13 @@
 ;;                                   :with-author nil
 ;;                                   :with-toc nil))
 ;;
-;; Or just setup your export options in the org buffer/subtree. These are
+;; Or just setup your export options in the org buffer/subtree.  These are
 ;; overridden by `org-mime-export-options' when it is non-nil.
 ;;
 ;;
 ;; Quick start:
 ;; Write a message in message-mode, make sure the mail body follows
-;; org format. Run `org-mime-edit-mail-in-org-mode' to edit mail
+;; org format.  Run `org-mime-edit-mail-in-org-mode' to edit mail
 ;; in a special edit with `org-mode'.
 ;; Run `org-mime-htmlize' to convert the plain text mail to html mail.
 ;; Run `org-mime-revert-to-plain-text-mail' if you want to restore to
@@ -91,7 +91,7 @@
 ;; 1. In order to embed images into your mail, use the syntax below,
 ;; [[/full/path/to/your.jpg]]
 ;;
-;; 2. It's easy to add your own emphasis markup. For example, to render text
+;; 2. It's easy to add your own emphasis markup.  For example, to render text
 ;; between "@" in a red color, you can add a function to `org-mime-html-hook':
 ;;
 ;;   (add-hook 'org-mime-html-hook
@@ -109,6 +109,8 @@
 ;;    For example, see https://github.com/org-mime/org-mime/issues/38
 ;;    The solution is patching org-mode,
 ;;    https://lists.gnu.org/archive/html/emacs-orgmode/2019-11/msg00016.html
+;;
+;; 5. See https://github.com/org-mime/org-mime for more tips
 ;;
 
 ;;; Code:
@@ -141,7 +143,7 @@ And ensure first line isn't assumed to be a title line."
 
 (defcustom org-mime-export-ascii nil
   "ASCII export options for text/plain.
-Default (nil) selects the original org-mode file."
+Default (nil) selects the original org file."
   :group 'org-mime
   :type '(choice 'ascii 'latin1 'utf-8))
 
@@ -211,7 +213,7 @@ buffer holding the text to be exported.")
             (org-export--get-inbuffer-options))))))
 
 (defun org-mime-current-line ()
-  "Get current line"
+  "Get current line."
   (buffer-substring-no-properties (line-beginning-position)
                                   (line-end-position)))
 
@@ -319,7 +321,7 @@ HTML is the body of the message."
       (buffer-substring (point-min) (point-max)))))
 
 (defun org-mime-multipart (plain html &optional images)
-  "Markup a multipart/alternative with HTML alternatives.
+  "Markup PLAIN body a multipart/alternative with HTML alternatives.
 If html portion of message includes IMAGES they are wrapped in multipart/related part."
   (cl-case org-mime-library
     (mml (concat "<#multipart type=alternative>\n<#part type=text/plain>\n"
@@ -374,7 +376,7 @@ CURRENT-FILE is used to calculate full path of images."
 
            ;; Catch non-existent files here. Otherwise users get an error on sending.
            (unless (file-exists-p path)
-             (user-error "path: %s does not exist" path))
+             (user-error "Path: %s does not exist" path))
 
            ;; Do it
            (add-to-list 'html-images
@@ -399,7 +401,7 @@ CURRENT-FILE is used to calculate full path of images."
     nil)))
 
 (defun org-mime-insert-html-content (plain file html opts)
-  "Insert HTML content."
+  "Insert PLAIN into FILE with HTML content and OPTS."
   (let* ((files (org-mime-extract-non-image-files))
          ;; dvipng for inline latex because MathJax doesn't work in mail
          ;; Also @see https://github.com/org-mime/org-mime/issues/16
@@ -583,15 +585,16 @@ The cursor ends in the TO field."
   "Get Org major version."
   (string-to-number (car (split-string (org-release) "\\."))))
 
-(defun org-mime-attr (p)
-  (org-entry-get nil p org-mime-use-property-inheritance))
+(defun org-mime-attr (property)
+  "Get org mime PROPERTY."
+  (org-entry-get nil property org-mime-use-property-inheritance))
 
 ;;;###autoload
 (defun org-mime-org-subtree-htmlize (&optional htmlize-first-level)
-  "Create an email buffer of the current subtree.  If HTMLIZE-FIRST-LEVEL is
-not nil, the first level subtree which containing current subtree is htmlized.
+  "Create an email buffer from current subtree.
+If HTMLIZE-FIRST-LEVEL is t, first level subtree of current node is htmlized.
 
-Following headline properties can determine the mail headers,
+Following headline properties can determine the mail headers.
 * subtree heading
   :PROPERTIES:
   :MAIL_SUBJECT: mail title
@@ -599,8 +602,7 @@ Following headline properties can determine the mail headers,
   :MAIL_CC: person2@gmail.com
   :MAIL_BCC: person3@gmail.com
   :MAIL_FROM: sender@gmail.com
-  :END:
-"
+  :END:"
   (interactive "P")
   (save-excursion
     (org-back-to-heading)
@@ -763,7 +765,7 @@ Following headline properties can determine the mail headers,
         (org-mime-src-mode))))))
 
 (defun org-mime-revert-to-plain-text-mail ()
-  "Revert mail body to plain text "
+  "Revert mail body to plain text."
   (interactive)
   (let* ((txt-sep "<#part type=text/plain")
          (html-sep "<#part type=text/html>")
@@ -789,14 +791,14 @@ Following headline properties can determine the mail headers,
       (message "Can not find plain text mail.")))))
 
 (defun org-mime-confirm-when-no-multipart ()
-  "Prompts whether to send email if the buffer does not seem to be html-ized"
+  "Prompts whether to send email if the buffer is not html-ized."
   (let ((found-multipart (save-excursion
                            (save-restriction
                              (widen)
                              (goto-char (point-min))
                              (search-forward "<#multipart type=alternative>" nil t)))))
     (when (and (not found-multipart)
-               (not (y-or-n-p "org-mime-htmlize not called; send anyway?")))
+               (not (y-or-n-p "It seems `org-mime-htmlize' is NOT called; send anyway? ")))
       (setq quit-flag t))))
 
 

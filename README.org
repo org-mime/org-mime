@@ -1,9 +1,8 @@
-* org-mime v0.2.0
-
+* org-mime
 [[https://travis-ci.org/org-mime/org-mime][https://travis-ci.org/org-mime/org-mime.svg?branch=master]]
 [[http://melpa.org/#/org-mime][file:http://melpa.org/packages/org-mime-badge.svg]] [[http://stable.melpa.org/#/org-mime][file:http://stable.melpa.org/packages/org-mime-badge.svg]]
 
-org-mime can be used to send HTML email using Org-mode HTML export.
+This program sends HTML email using Org-mode HTML export.
 
 This approximates a WYSiWYG HTML mail editor from within Emacs, and can be useful for sending tables, fontified source code, and inline images in email.
 

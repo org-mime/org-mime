@@ -294,8 +294,9 @@ OPTS is export options."
 HTML is the body of the message."
   (let ((quote-depth 0)
         (line-depth 0)
-        (quote-opening "<blockquote class=\"gmail_quote\" style=\"margin:0 0 0 .8ex;border-left:1px #ccc solid;padding-left:1ex\">\n<p>\n")
-        (quote-closing "</p>\n</blockquote>\n"))
+        (in-quote-p nil)
+        (quote-opening "<blockquote class=\"gmail_quote\" style=\"margin:0 0 0 .8ex;border-left:1px #ccc solid;padding-left:1ex\">\n\n<div>")
+        (quote-closing "\n</div></blockquote>\n"))
     (with-temp-buffer
       ;; clean title of quoted
       (insert (replace-regexp-in-string
@@ -305,7 +306,9 @@ HTML is the body of the message."
       (goto-char (point-min))
       (while (not (eobp))
         (setq line-depth 0)
+        (setq in-quote-p nil)
         (while (looking-at "&gt;[ \t]*")
+          (setq in-quote-p t)
           (replace-match "")
           (cl-incf line-depth))
         (cond
@@ -317,7 +320,13 @@ HTML is the body of the message."
           (while (> quote-depth line-depth)
             (insert quote-closing)
             (cl-decf quote-depth))))
-        (forward-line))
+        (if (and in-quote-p (looking-at "^[ \t]*$"))
+            (progn
+              (insert "</div>\n<div>")
+              (forward-line)
+              (insert "<br />")
+              (insert "</div>\n<div>"))
+          (forward-line)))
       (buffer-substring (point-min) (point-max)))))
 
 (defun org-mime-multipart (plain html &optional images)

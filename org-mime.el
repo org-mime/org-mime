@@ -324,8 +324,7 @@ HTML is the body of the message."
             (progn
               (insert "</div>\n<div>")
               (forward-line)
-              (insert "<br />")
-              (insert "</div>\n<div>"))
+              (insert "<br /></div>\n<div>"))
           (forward-line)))
       (buffer-substring (point-min) (point-max)))))
 

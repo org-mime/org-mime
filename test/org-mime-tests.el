@@ -1,4 +1,4 @@
-;; counsel-etags-tests.el --- unit tests for counsel-etags -*- coding: utf-8 -*-
+;; org-mime-tests.el --- unit tests for org-mime -*- coding: utf-8 -*-
 
 ;; Author: Chen Bin <chenbin DOT sh AT gmail DOT com>
 

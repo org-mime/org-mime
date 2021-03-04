@@ -200,6 +200,12 @@ buffer holding the text to be exported.")
 (defvar org-mime--saved-temp-window-config nil)
 (defconst org-mime-src--hint "## org-mime hint: Press C-c C-c to commit change.\n")
 
+(defun org-mime-get-buffer-export-options ()
+  "Get export options in buffer."
+  (or org-mime-export-options
+      (and (fboundp 'org-export--get-inbuffer-options)
+           (org-export--get-inbuffer-options))))
+
 (defun org-mime-get-export-options (subtreep)
   "SUBTREEP is t if current node is subtree."
   (cond
@@ -208,9 +214,7 @@ buffer holding the text to be exported.")
         (if (fboundp 'org-export--get-subtree-options)
             (org-export--get-subtree-options))))
    (t
-    (or org-mime-export-options
-        (if (fboundp 'org-export--get-inbuffer-options)
-            (org-export--get-inbuffer-options))))))
+    (org-mime-get-buffer-export-options))))
 
 (defun org-mime-current-line ()
   "Get current line."
@@ -479,8 +483,7 @@ If called with an active region only export that region, otherwise entire body."
                         (point-max))))
          (org-text (buffer-substring html-start html-end))
 ;; to hold attachments for inline html images
-         (opts (if (fboundp 'org-export--get-inbuffer-options)
-                   (org-export--get-inbuffer-options)))
+         (opts (org-mime-get-buffer-export-options))
          (ascii-charset (org-mime-use-ascii-charset))
          (plain (if ascii-charset
                     (progn
@@ -509,8 +512,8 @@ If called with an active region only export that region, otherwise entire body."
 
 (defun org-mime--get-buffer-title ()
   "Get buffer title."
-  (let* ((tmp (if (fboundp 'org-export--get-inbuffer-options)
-                  (plist-get (org-export--get-inbuffer-options) :title))))
+  (let* ((options (org-mime-get-buffer-export-options))
+         (tmp (and options (plist-get options :title))))
     (when tmp
       (let ((txt (car tmp)))
         (set-text-properties 0 (length txt) nil txt)

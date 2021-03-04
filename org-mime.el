@@ -225,17 +225,22 @@ buffer holding the text to be exported.")
   "Return nil unless org-mime-export-ascii is set to a valid value."
   (car (memq org-mime-export-ascii '(ascii utf-8 latin1))))
 
+(defun org-mime-export-ascii-maybe (text-for-ascii text-for-plain)
+  "Export `TEXT-FOR-ASCII' to ascii format or use TEXT-FOR-PLAIN."
+  (let* ((ascii-charset (org-mime-use-ascii-charset)))
+    (cond
+     (ascii-charset
+      (setq org-ascii-charset ascii-charset)
+      (org-export-string-as text-for-ascii 'ascii nil opts))
+     (t
+      text-for-plain))))
+
 (defun org-mime-export-buffer-or-subtree (subtreep)
   "Similar to `org-html-export-as-html' and `org-org-export-as-org'.
 SUBTREEP is t if current node is subtree."
   (let* (
-         (ascii-charset (org-mime-use-ascii-charset))
          (opts (org-mime-get-export-options subtreep))
-         (plain (if ascii-charset
-                    (progn
-                      (setq org-ascii-charset ascii-charset)
-                      (org-export-string-as (buffer-string) 'ascii nil opts))
-                  (buffer-string)))
+         (plain (org-mime-export-ascii-maybe (buffer-string) (buffer-string)))
          (buf (org-export-to-buffer 'html "*Org Mime Export*"
                 nil subtreep nil opts))
          (body (prog1
@@ -485,11 +490,7 @@ If called with an active region only export that region, otherwise entire body."
 ;; to hold attachments for inline html images
          (opts (org-mime-get-buffer-export-options))
          (ascii-charset (org-mime-use-ascii-charset))
-         (plain (if ascii-charset
-                    (progn
-                      (setq org-ascii-charset ascii-charset)
-                      (org-export-string-as (concat org-mime-default-header org-text) 'ascii nil opts))
-                  org-text))
+         (plain (org-mime-export-ascii-maybe (concat org-mime-default-header org-text) org-text))
          (html (org-mime-export-string (concat org-mime-default-header org-text) opts))
          (file (make-temp-name (expand-file-name
                                 "mail" temporary-file-directory))))

@@ -125,7 +125,7 @@
   :type 'boolean)
 
 (defcustom org-mime-use-property-inheritance nil
-  "Non-nil means al MAIL_ properties apply also for sublevels."
+  "Non-nil means al MAIL_ properties apply also for sub-levels."
   :group 'org-mime
   :type 'boolean)
 
@@ -522,7 +522,7 @@ If called with an active region only export that region, otherwise entire body."
 
 (defun org-mime-compose (exported file to subject headers subtreep)
   "Create mail body from EXPORTED in FILE with TO, SUBJECT, HEADERS.
-If SUBTREEP is t, curret org node is subtree."
+If SUBTREEP is t, current org node is subtree."
   ;; start composing mail
   (let* ((html (car exported))
          (plain (cdr exported))

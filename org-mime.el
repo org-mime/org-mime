@@ -152,9 +152,9 @@ Default (nil) selects the original org file."
   :group 'org-mime
   :type 'boolean)
 
-(defcustom org-mime-fixedwith-wrap
+(defcustom org-mime-fixed-width-wrap
   "<pre style=\"font-family: courier, monospace;\">\n%s</pre>\n"
-  "Format string used to wrap a fixedwidth HTML email."
+  "Format string used to wrap a fixed width HTML email."
   :group 'org-mime
   :type 'string)
 
@@ -621,7 +621,7 @@ Following headline properties can determine the mail headers.
 
     (when (and htmlize-first-level
                (not (string-match "^\\* " (org-mime-current-line))))
-      ;; go back to the 1st level substree
+      ;; go back to the 1st level subtree
       (re-search-backward "^\\* ")
       (org-back-to-heading))
 
@@ -803,7 +803,7 @@ Following headline properties can determine the mail headers.
       (message "Can not find plain text mail.")))))
 
 (defun org-mime-confirm-when-no-multipart ()
-  "Prompts whether to send email if the buffer is not html-ized."
+  "Prompts whether to send email if the buffer is not htmlized."
   (let ((found-multipart (save-excursion
                            (save-restriction
                              (widen)

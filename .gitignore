@@ -25,3 +25,4 @@ Session.vim
 *.tar
 *.elc
 
+htmlize.el

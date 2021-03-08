@@ -129,13 +129,6 @@
   :group 'org-mime
   :type 'boolean)
 
-(defcustom org-mime-default-header
-  "#+OPTIONS: latex:t toc:nil H:3\n"
-  "Default header to control html export options.
-And ensure first line isn't assumed to be a title line."
-  :group 'org-mime
-  :type 'string)
-
 (defcustom org-mime-library 'mml
   "Library to use for marking up MIME elements."
   :group 'org-mime
@@ -249,16 +242,20 @@ SUBTREEP is t if current node is subtree."
                  (kill-buffer buf))))
     (cons body plain)))
 
-(defun org-mime-export-string (string &optional opts)
-  "Export STRING into html.
-OPTS is export options."
+(defun org-mime-export-string (string &optional options)
+  "Export STRING into html with OPTIONS."
   ;; Emacs 25+ prefer exporting drawer by default
   ;; obviously not acceptable in exporting to mail body
   (let* ((org-export-with-drawers nil))
+
+    (when org-mime-export-options
+      (setq options org-mime-export-options))
+
     ;; we won't export title from org file anyway
-    (if opts (setq opts (plist-put opts 'title nil)))
+    (if options (setq options (plist-put options 'title nil)))
+
     ;; emacs24.4+
-    (org-export-string-as string 'html t (or org-mime-export-options opts))))
+    (org-export-string-as string 'html t options)))
 
 ;; example hook, for setting a dark background in
 ;; <pre style="background-color: #EEE;"> elements
@@ -490,8 +487,8 @@ If called with an active region only export that region, otherwise entire body."
 ;; to hold attachments for inline html images
          (opts (org-mime-get-buffer-export-options))
          (ascii-charset (org-mime-use-ascii-charset))
-         (plain (org-mime-export-ascii-maybe (concat org-mime-default-header org-text) org-text))
-         (html (org-mime-export-string (concat org-mime-default-header org-text) opts))
+         (plain (org-mime-export-ascii-maybe org-text org-text))
+         (html (org-mime-export-string org-text opts))
          (file (make-temp-name (expand-file-name
                                 "mail" temporary-file-directory))))
 

@@ -35,21 +35,33 @@
                         "--\n"
                         "Some quote\n"))
 
+(defun run-org-mime-htmlize (&rest mail-body)
+  "Create mail containing MAIL-BODY and run `org-mime-htmlize'."
+  (with-temp-buffer
+    (apply #'insert mail-header)
+    (apply #'insert mail-body)
+    (apply #'insert mail-footer)
+    (message-mode)
+    (goto-char (point-min))
+    (org-mime-htmlize)
+    (buffer-string)))
+
 (ert-deftest test-org-mime-htmlize ()
-  (let* (str)
-    (with-temp-buffer
-      (apply #'insert mail-header)
-      (insert "* hello\n"
-              "** world\n"
-              "#+begin_src javascript\n"
-              "console.log('hello world');\n"
-              "#+end_src\n")
-      (apply #'insert mail-footer)
-      (message-mode)
-      (goto-char (point-min))
-      (org-mime-htmlize)
-      (setq str (buffer-string)))
+  (let* ((str (run-org-mime-htmlize "* hello\n"
+                          "** world\n"
+                          "#+begin_src javascript\n"
+                          "console.log('hello world');\n"
+                          "#+end_src\n")))
     (should (string-match "<#multipart" str))))
+
+(ert-deftest test-org-mime-export-options ()
+  (let* (str)
+    (setq org-mime-export-options '(:with-toc t))
+    (setq str (run-org-mime-htmlize "* hello\n"))
+    (should (string-match "Table of Contents" str))
+    (setq org-mime-export-options '(:with-toc nil))
+    (setq str (run-org-mime-htmlize "* hello\n"))
+    (should (not (string-match "Table of Contents" str)))))
 
 (ert-deftest test-org-mime-org-subtree-htmlize ()
   (let* (str opts)

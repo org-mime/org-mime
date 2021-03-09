@@ -204,8 +204,8 @@ buffer holding the text to be exported.")
   (cond
    (subtreep
     (or org-mime-export-options
-        (if (fboundp 'org-export--get-subtree-options)
-            (org-export--get-subtree-options))))
+        (and (fboundp 'org-export--get-subtree-options)
+             (org-export--get-subtree-options))))
    (t
     (org-mime-get-buffer-export-options))))
 
@@ -231,11 +231,9 @@ buffer holding the text to be exported.")
 (defun org-mime-export-buffer-or-subtree (subtreep)
   "Similar to `org-html-export-as-html' and `org-org-export-as-org'.
 SUBTREEP is t if current node is subtree."
-  (let* (
-         (opts (org-mime-get-export-options subtreep))
+  (let* ((opts (org-mime-get-export-options subtreep))
          (plain (org-mime-export-ascii-maybe (buffer-string) (buffer-string)))
-         (buf (org-export-to-buffer 'html "*Org Mime Export*"
-                nil subtreep nil opts))
+         (buf (org-export-to-buffer 'html "*Org Mime Export*" nil subtreep nil t opts))
          (body (prog1
                    (with-current-buffer buf
                      (buffer-string))

@@ -1,13 +1,13 @@
 ;;; org-mime.el --- org html export for text/html MIME emails
 
-;; Copyright (C) 2010-2015 Eric Schulte
+;; Copyright (C) 2010-2015 Eric Schulte, 2016-2021 Chen Bin
 
 ;; Author: Eric Schulte
 ;; Maintainer: Chen Bin (redguardtoo)
 ;; Keywords: mime, mail, email, html
 ;; Homepage: http://github.com/org-mime/org-mime
-;; Version: 0.2.1
-;; Package-Requires: ((emacs "25.1") (cl-lib "0.5"))
+;; Version: 0.2.2
+;; Package-Requires: ((emacs "25.1"))
 
 ;; This file is not part of GNU Emacs.
 
@@ -533,17 +533,20 @@ If SUBTREEP is t, current org node is subtree."
     ;; insert text
     (org-mime-insert-html-content plain file patched-html export-opts)))
 
-(defun org-mime-extract-keywords ()
-  "Extract keywords."
-  (cond
-   ((>= (org-mime-org-major-version) 9)
+(defun org-mime-buffer-properties ()
+  "Extract buffer properties."
+  (let* (rlt value key)
     (org-element-map (org-element-parse-buffer) 'keyword
       (lambda (keyword)
-        (cons (org-element-property :key keyword)
-              (org-element-property :value keyword)))))
-   (t
-    (message "Warning: org-element-map is not available. File keywords will not work.")
-    '())))
+        (when (and (string= (org-element-property :key keyword) "PROPERTY")
+                   (string-match "^MAIL_\\(TO\\|SUBJECT\\|CC\\|BCC\\|FROM\\) +"
+                                 (setq value (org-element-property :value keyword)))
+                   (setq key (concat "MAIL_" (match-string 1 value)))
+                   (setq rlt
+                         (plist-put rlt
+                                    (intern (concat ":" key))
+                                    (string-trim (replace-regexp-in-string key "" value))))))))
+    rlt))
 
 (defun org-mime-build-mail-other-headers (cc bcc from)
   "Build mail header from CC, BCC, and FROM."
@@ -573,18 +576,20 @@ The cursor ends in the TO field."
   (let* ((org-html-klipsify-src nil)
          (region-p (org-region-active-p))
          (file (buffer-file-name (current-buffer)))
-         (keywords (org-mime-extract-keywords))
-         (subject (or (cdr (assoc "MAIL_SUBJECT" keywords))
+         (props (org-mime-buffer-properties))
+         (subject (or (plist-get props :MAIL_SUBJECT)
                       (org-mime--get-buffer-title)
                       (if (not file) (buffer-name (buffer-base-buffer))
                         (file-name-sans-extension
                          (file-name-nondirectory file)))))
          (exported (org-mime-export-buffer-or-subtree nil))
-         (to (cdr (assoc "MAIL_TO" keywords)))
-         (cc (cdr (assoc "MAIL_CC" keywords)))
-         (bcc (cdr (assoc "MAIL_BCC" keywords)))
-         (from (cdr (assoc "MAIL_FROM" keywords)))
-         (other-headers (org-mime-build-mail-other-headers cc bcc from)))
+         (to (plist-get props :MAIL_TO))
+         (cc (plist-get props :MAIL_CC))
+         (bcc (plist-get props :MAIL_BCC))
+         (from (plist-get props :MAIL_FROM))
+         (other-headers (org-mime-build-mail-other-headers cc
+                                                           bcc
+                                                           from)))
     (org-mime-compose exported file to subject other-headers nil)
     (message-goto-to)))
 
@@ -622,12 +627,18 @@ Following headline properties can determine the mail headers.
 
     (when (outline-on-heading-p nil)
       (let* ((file (buffer-file-name (current-buffer)))
+             (props (org-mime-buffer-properties))
              (subject (or (org-mime-attr "MAIL_SUBJECT")
+                          (plist-get props :MAIL_SUBJECT)
                           (nth 4 (org-heading-components))))
-             (to (org-mime-attr "MAIL_TO"))
-             (cc (org-mime-attr "MAIL_CC"))
-             (bcc (org-mime-attr "MAIL_BCC"))
-             (from (org-mime-attr "MAIL_FROM"))
+             (to (or (org-mime-attr "MAIL_TO")
+                     (plist-get props :MAIL_TO)))
+             (cc (or (org-mime-attr "MAIL_CC")
+                     (plist-get props :MAIL_CC)))
+             (bcc (or (org-mime-attr "MAIL_BCC")
+                      (plist-get props :MAIL_BCC)))
+             (from (or (org-mime-attr "MAIL_FROM")
+                       (plist-get props :MAIL_FROM)))
              ;; Thanks to Matt Price improving handling of cc & bcc headers
              (other-headers (org-mime-build-mail-other-headers cc bcc from))
              (org-export-show-temporary-export-buffer nil)
@@ -639,7 +650,7 @@ Following headline properties can determine the mail headers.
              ;; they get exported again. This makes each block conditionally
              ;; exposed depending on the backend.
              (exported (save-restriction (org-narrow-to-subtree)
-                                          (org-mime-export-buffer-or-subtree t))))
+                                         (org-mime-export-buffer-or-subtree t))))
         (save-restriction
           (org-narrow-to-subtree)
           (org-mime-compose exported file to subject other-headers t))

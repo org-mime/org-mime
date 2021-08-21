@@ -82,20 +82,33 @@
     (should (string-match "<#multipart" str))))
 
 (ert-deftest test-org-mime-org-buffer-htmlize ()
-  (let* (str opts)
+  (let* (str opts props)
     (with-temp-buffer
-      (insert "* hello\n"
-              "** world\n"
-              "#+begin_src javascript\n"
-              "console.log('hello world');\n"
-              "#+end_src\n")
+      (insert
+       "#+PROPERTY: MAIL_SUBJECT My mail subject\n"
+       "#+PROPERTY: MAIL_TO Someone <someone@somewhere.tld>\n"
+       "#+PROPERTY: MAIL_FROM Me <me@mine.tld>\n"
+       "#+PROPERTY: MAIL_CC ccme@somewhere.tld\n"
+       "#+PROPERTY: MAIL_BCC bccme@mine.tld\n"
+       "* hello\n"
+       "* hello\n"
+       "** world\n"
+       "#+begin_src javascript\n"
+       "console.log('hello world');\n"
+       "#+end_src\n")
       (org-mode)
       (goto-char (point-min))
+      (setq props (org-mime-buffer-properties))
       (setq opts (org-mime-get-export-options t))
       (should opts)
       (org-mime-org-buffer-htmlize)
       (switch-to-buffer (car (message-buffers)))
       (setq str (buffer-string)))
+    (should (string= "My mail subject" (plist-get props :MAIL_SUBJECT)))
+    (should (string= "Someone <someone@somewhere.tld>" (plist-get props :MAIL_TO)))
+    (should (string= "Me <me@mine.tld>" (plist-get props :MAIL_FROM)))
+    (should (string= "ccme@somewhere.tld" (plist-get props :MAIL_CC)))
+    (should (string= "bccme@mine.tld" (plist-get props :MAIL_BCC)))
     (should (string-match "<#multipart" str))))
 
 (ert-deftest test-org-mime-build-mail-other-headers ()

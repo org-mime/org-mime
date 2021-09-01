@@ -298,7 +298,20 @@
                            "</div></blockquote>\n"
                            "</p>\n"))
     (setq beautified (org-mime-beautify-quoted html))
-    (should (equal beautified expected))
-)
+    (should (equal beautified expected)))
+
+
+(ert-deftest test-org-mime-extract-non-org ()
+  (let* ((content (concat "*hello world\n"
+                          "<#part type=\"application/pdf\" filename=\"1.pdl\" disposition=attachment>\n<#/part>\n"
+                          "<#secure method=pgpmime mode=sign>\n"))
+         tags)
+
+    (with-temp-buffer
+      (insert content)
+      (message-mode)
+      (setq tags (org-mime-extract-non-org)))
+    (should (string= (nth 0 tags) "<#part type=\"application/pdf\" filename=\"1.pdl\" disposition=attachment>\n<#/part>"))
+    (should (string= (nth 1 tags) "<#secure method=pgpmime mode=sign>"))))
 
 (ert-run-tests-batch-and-exit)

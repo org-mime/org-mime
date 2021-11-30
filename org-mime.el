@@ -363,9 +363,16 @@ Or else use CURRENT-FILE to calculate path."
          (path (expand-file-name url dir)))
     (cond
      ((string-match-p "^file:///" url)
-      (replace-regexp-in-string "^file://" "" url))
+      (let* ((str (replace-regexp-in-string "^file://" "" url)))
+        (when (and (eq system-type 'windows-nt)
+                   (string-match "^/[a-zA-Z]:" str))
+          ;; remove the first character from "/C:/Windows/File.txt"
+          (setq str (substring str 1)))
+        str))
+
      ((file-exists-p path)
       path)
+
      (t
       (expand-file-name url default-directory)))))
 

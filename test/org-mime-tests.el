@@ -311,7 +311,10 @@
       (insert content)
       (message-mode)
       (setq tags (org-mime-extract-non-org)))
-    (should (string= (nth 0 tags) "<#part type=\"application/pdf\" filename=\"1.pdl\" disposition=attachment>\n<#/part>"))
-    (should (string= (nth 1 tags) "<#secure method=pgpmime mode=sign>"))))
+    (should (string= (nth 0 (plist-get tags :part-tags))
+                     "<#part type=\"application/pdf\" filename=\"1.pdl\" disposition=attachment>\n<#/part>"))
+
+    (should (string= (nth 0 (plist-get tags :secure-tags))
+                     "<#secure method=pgpmime mode=sign>"))))
 
 (ert-run-tests-batch-and-exit)

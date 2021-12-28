@@ -6,7 +6,7 @@
 ;; Maintainer: Chen Bin (redguardtoo)
 ;; Keywords: mime, mail, email, html
 ;; Homepage: http://github.com/org-mime/org-mime
-;; Version: 0.2.3
+;; Version: 0.2.4
 ;; Package-Requires: ((emacs "25.1"))
 
 ;; This file is not part of GNU Emacs.
@@ -475,10 +475,22 @@ CURRENT-FILE is used to calculate full path of images."
     (re-search-backward org-mime-mail-signature-separator nil t nil)))
 
 
+(defmacro org-mime-extract-tag-in-current-buffer (beginning end result)
+  "Extract the text between BEGINNING and END and insert it into RESULT."
+  `(when (and ,beginning ,end (< ,beginning ,end))
+     (push (buffer-substring-no-properties ,beginning ,end) ,result)
+     ;; delete old tag
+     (delete-region ,beginning ,end)))
+
 (defun org-mime-extract-non-org ()
   "Extract content not in org format (gpg signature, attachments ...)."
   (unless (org-region-active-p)
-    (let* (rlt str b e (old-pos (point)))
+    (let* (secure-tags
+           part-tags
+           str
+           b
+           e
+           (old-pos (point)))
       (goto-char (point-min))
       (while (re-search-forward "<#secure \\|<#part " (point-max) t)
         (setq str (match-string 0))
@@ -486,19 +498,16 @@ CURRENT-FILE is used to calculate full path of images."
         (cond
          ;; one line gpg signature tag
          ((string-match "^<#secure " str)
-          (setq e (line-end-position)))
+          (setq e (line-end-position))
+          (org-mime-extract-tag-in-current-buffer b e secure-tags))
 
          ;; multi-lines attachment
          ((string-match "^<#part " str)
           (save-excursion
             (unless (re-search-forward "<#/part>" (point-max) t)
               (error (format "\"%s\" should have end tag." str)))
-            (setq e (match-end 0)))))
-
-        ;; delete tag
-        (when (and b e (< b e))
-          (push (buffer-substring-no-properties b e) rlt)
-          (delete-region b e))
+            (setq e (match-end 0))
+            (org-mime-extract-tag-in-current-buffer b e part-tags))))
 
         ;; search next tag
         (goto-char (point-min)))
@@ -506,7 +515,8 @@ CURRENT-FILE is used to calculate full path of images."
       ;; move cursor back to its original position
       (goto-char old-pos)
 
-      (nreverse rlt))))
+      (list :secure-tags (nreverse secure-tags)
+            :part-tags (nreverse part-tags)))))
 
 ;;;###autoload
 (defun org-mime-htmlize ()
@@ -516,7 +526,9 @@ If called with an active region only export that region, otherwise entire body."
   (when org-mime-debug (message "org-mime-htmlize called"))
 
   (let* ((region-p (org-region-active-p))
-         (tags (org-mime-extract-non-org))
+         (all-tags (org-mime-extract-non-org))
+         (secure-tags (plist-get all-tags :secure-tags))
+         (part-tags (plist-get all-tags :part-tags))
          (html-start (funcall org-mime-find-html-start
                               (or (and region-p (region-beginning))
                                   (org-mime-mail-body-begin))))
@@ -537,12 +549,17 @@ If called with an active region only export that region, otherwise entire body."
     (delete-region html-start html-end)
     (goto-char html-start)
 
+    ;; restore secure tags
+    (when secure-tags
+      (insert (mapconcat #'identity secure-tags "\n"))
+      (insert "\n"))
+
     ;; insert converted html
     (org-mime-insert-html-content plain file html opts)
 
-    ;; restore non-org tags
-    (dolist (tag tags)
-      (insert (concat "\n" tag "\n")))))
+    ;; restore part tags
+    (when part-tags
+      (insert (mapconcat #'identity part-tags "\n")))))
 
 (defun org-mime-apply-html-hook (html)
   "Apply HTML hook."

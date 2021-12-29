@@ -850,7 +850,7 @@ Following headline properties can determine the mail headers.
 (defun org-mime-revert-to-plain-text-mail ()
   "Revert mail body to plain text."
   (interactive)
-  (let* ((txt-sep "<#part type=text/plain")
+  (let* ((txt-sep "<#part type=text/plain>")
          (html-sep "<#part type=text/html>")
          mail-beg
          mail-text
@@ -868,6 +868,8 @@ Following headline properties can determine the mail headers.
                                                       (- txt-end (length html-sep))))
       ;; delete html mail
       (delete-region mail-beg (point-max))
+      (when org-mime-debug
+        (message "mail-beg=%s mail-text=%s" mail-beg mail-text))
       ;; restore text mail
       (insert mail-text))
      (t

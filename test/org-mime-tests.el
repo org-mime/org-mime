@@ -317,4 +317,22 @@
     (should (string= (nth 0 (plist-get tags :secure-tags))
                      "<#secure method=pgpmime mode=sign>"))))
 
+(ert-deftest test-org-mime-revert-to-plain-text ()
+  (with-temp-buffer
+    (insert
+     "--text follows this line--"
+     "<#multipart type=alternative>\n"
+     "<#part type=text/plain>\n"
+     "test\n"
+     "hello\n"
+     "<#part type=text/html>\n"
+     "<p>\n"
+     "test\n"
+     "hello\n"
+     "</p>\n"
+     "<#/multipart>\n")
+    (message-mode)
+    (org-mime-revert-to-plain-text-mail)
+    (should (string= (string-trim (buffer-string))
+                     "--text follows this line--\ntest\nhello"))))
 (ert-run-tests-batch-and-exit)

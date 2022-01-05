@@ -169,7 +169,9 @@ Default (nil) selects the original org file."
 (defvar org-mime-export-options '(:with-latex dvipng)
   "Default export options which may override org buffer/subtree options.
 You avoid exporting section-number/author/toc with the setup below,
-`(setq org-mime-export-options '(:section-numbers nil :with-author nil :with-toc nil))'")
+`(setq org-mime-export-options '(:section-numbers nil
+                                 :with-author nil
+                                 :with-toc nil))'")
 
 (defvar org-mime-html-hook nil
   "Hook to run over the html buffer before attachment to email.
@@ -218,7 +220,7 @@ buffer holding the text to be exported.")
   "Return nil unless org-mime-export-ascii is set to a valid value."
   (car (memq org-mime-export-ascii '(ascii utf-8 latin1))))
 
-(defun org-mime-export-ascii-maybe (text-for-ascii text-for-plain)
+(defun org-mime-export-ascii-maybe (text-for-ascii text-for-plain &optional opts)
   "Export `TEXT-FOR-ASCII' to ascii format or use TEXT-FOR-PLAIN."
   (let* ((ascii-charset (org-mime-use-ascii-charset)))
     (cond
@@ -232,7 +234,7 @@ buffer holding the text to be exported.")
   "Similar to `org-html-export-as-html' and `org-org-export-as-org'.
 SUBTREEP is t if current node is subtree."
   (let* ((opts (org-mime-get-export-options subtreep))
-         (plain (org-mime-export-ascii-maybe (buffer-string) (buffer-string)))
+         (plain (org-mime-export-ascii-maybe (buffer-string) (buffer-string) opts))
          (buf (org-export-to-buffer 'html "*Org Mime Export*" nil subtreep nil t opts))
          (body (prog1
                    (with-current-buffer buf
@@ -334,7 +336,8 @@ HTML is the body of the message."
 
 (defun org-mime-multipart (plain html &optional images)
   "Markup PLAIN body a multipart/alternative with HTML alternatives.
-If html portion of message includes IMAGES they are wrapped in multipart/related part."
+If html portion of message includes IMAGES they are wrapped in
+multipart/related part."
   (cl-case org-mime-library
     (mml (concat "<#multipart type=alternative>\n<#part type=text/plain>\n"
                  plain
@@ -797,8 +800,7 @@ Following headline properties can determine the mail headers.
 
 (define-minor-mode org-mime-src-mode
   "Minor mode for org major mode buffers generated from mail body."
-  nil " OrgMimeSrc" nil
-  )
+  :lighter " OrgMimeSrc")
 (add-hook 'org-mime-src-mode-hook #'org-mime-src-mode-configure-edit-buffer)
 
 (defun org-mime-src--make-source-overlay (beg end)

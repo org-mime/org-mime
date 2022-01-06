@@ -1,6 +1,8 @@
 * org-mime
 [[https://travis-ci.org/org-mime/org-mime][https://travis-ci.org/org-mime/org-mime.svg?branch=master]]
-[[http://melpa.org/#/org-mime][file:http://melpa.org/packages/org-mime-badge.svg]] [[http://stable.melpa.org/#/org-mime][file:http://stable.melpa.org/packages/org-mime-badge.svg]]
+[[https://elpa.nongnu.org/nongnu/org-mime.html][file:https://elpa.nongnu.org/nongnu/org-mime.svg]]
+[[http://melpa.org/#/org-mime][file:http://melpa.org/packages/org-mime-badge.svg]]
+[[http://stable.melpa.org/#/org-mime][file:http://stable.melpa.org/packages/org-mime-badge.svg]]
 
 This program sends HTML email using Org-mode HTML export.
 

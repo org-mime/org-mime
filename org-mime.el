@@ -91,9 +91,10 @@
 ;;
 ;; Extra Tips:
 ;; 1. In order to embed images into your mail, use the syntax below,
-;; [[/full/path/to/your.jpg]]
 ;;
-;; 2. It's easy to define your own emphasis markup.
+;;    [[/full/path/to/your.jpg]]
+;;
+;; 2. It's easy to define your hack the exported HTML.
 ;; For example, below code renders text between "#" in red color,:
 ;;
 ;;   (add-hook 'org-mime-html-hook

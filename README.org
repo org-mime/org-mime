@@ -70,8 +70,6 @@ Use below syntax,
 ** CSS style customization
 Email clients will often strip all global CSS from email messages. In the case of web-based email readers this is essential in order to protect the CSS of the containing web site. To ensure that your CSS styles are rendered correctly they must be included in the actual body of the elements to which they apply.
 
-The =org-mime-html-hook= allows for the insertion of these important CSS elements into the resulting HTML before mime encoding. The following are some possible uses of this hook.
-
 For those who use color themes with Dark backgrounds it is useful to set a dark background for all exported code blocks and example regions. This can be accomplished with the following,
 
 #+begin_src elisp
@@ -114,10 +112,18 @@ Please double check your org and latex setup. See [[https://github.com/org-mime/
 
 You can also modify the variable  =org-mime-org-html-with-latex-default=.
 
-** fix exported HTML
-Please note this program can only embed exported HTML into mail. Org-mode is responsible for rendering HTML.
+** fix exported plain text and html
+By default both the plain text and html are exported into the email.
 
-The *good news*  is the exported HTML could be changed in =org-mime-html-hook=. For example, below code renders text between "#" in red color,
+The exported plain text could be modified in =org-mime-plain-text-hook=. For example, below code removes "\\",
+#+begin_src elisp
+(add-hook 'org-mime-plain-text-hook
+          (lambda ()
+            (while (re-search-forward "\\\\" nil t)
+              (replace-match ""))))
+#+end_src
+
+The exported HTML could be modified in =org-mime-html-hook=. For example, below code renders text between "#" in red color,
 #+begin_src elisp
 (add-hook 'org-mime-html-hook
           (lambda ()
@@ -129,7 +135,9 @@ Surely you can fix the exported HTML in =org-mode=. For example, One issue of =o
 
 Thibault Marin provided [[https://lists.gnu.org/archive/html/emacs-orgmode/2019-11/msg00016.html][a patch]] to fix the =org-mode=.
 
-In summary, this package gives you freedom to hack the exported html in =org-mime-html-hook=. If you prefer a more "elegant" way, you could always investigate the =org-mode= instead.
+In summary, this package gives you freedom to hack the plain text part or html part of the email.
+
+If you prefer a more "elegant" way, you could always investigate the =org-mode= instead.
 ** Keep gpg signatures outside of multipart
 =org-mime-find-html-start= gives user a chance to tweak the region beginning to htmlize,
 #+begin_src lisp

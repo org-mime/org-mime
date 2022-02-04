@@ -6,7 +6,7 @@
 ;; Maintainer: Chen Bin (redguardtoo)
 ;; Keywords: mime, mail, email, html
 ;; Homepage: http://github.com/org-mime/org-mime
-;; Version: 0.2.5
+;; Version: 0.2.6
 ;; Package-Requires: ((emacs "25.1"))
 
 ;; This file is not part of GNU Emacs.
@@ -94,8 +94,15 @@
 ;;
 ;;    [[/full/path/to/your.jpg]]
 ;;
-;; 2. It's easy to define your hack the exported HTML.
-;; For example, below code renders text between "#" in red color,:
+;; 2. It's easy to define your hack the exported plain text and html.
+;; For example, below code removes "\\" from plain text,
+;;
+;;   (add-hook 'org-mime-plain-text-hook
+;;             (lambda ()
+;;               (while (re-search-forward "\\\\" nil t)
+;;                 (replace-match ""))))
+;;
+;; For example, below code renders text between "#" in red color from html,
 ;;
 ;;   (add-hook 'org-mime-html-hook
 ;;             (lambda ()
@@ -173,9 +180,13 @@ Default (nil) selects the original org file."
 You could avoid exporting section-number/author/toc.
 It overrides Org default settings, but still inferior to file-local settings.")
 
+(defvar org-mime-plain-text-hook nil
+  "Hook to run over the plain text buffer before adding it to email.
+This is used to process plain text part of email .")
+
 (defvar org-mime-html-hook nil
-  "Hook to run over the html buffer before attachment to email.
-This could be used for example to post-process html elements.")
+  "Hook to run over the html buffer before adding it to email.
+This is used to process html part of email.")
 
 (defvar org-mime-pre-html-hook nil
   "Hook to run before html export.
@@ -220,21 +231,22 @@ buffer holding the text to be exported.")
   "Return nil unless `org-mime-export-ascii' is set to a valid value."
   (car (memq org-mime-export-ascii '(ascii utf-8 latin1))))
 
-(defun org-mime-export-ascii-maybe (text-for-ascii text-for-plain &optional opts)
-  "Export `TEXT-FOR-ASCII' to ascii format or use TEXT-FOR-PLAIN with OPTS."
-  (let* ((ascii-charset (org-mime-use-ascii-charset)))
-    (cond
-     (ascii-charset
-      (setq org-ascii-charset ascii-charset)
-      (org-export-string-as text-for-ascii 'ascii nil opts))
-     (t
-      text-for-plain))))
+(defun org-mime-export-ascii-maybe (text &optional opts)
+  "Export TEXT to ascii format with OPTS."
+  (let* ((ascii-charset (org-mime-use-ascii-charset))
+         (plain-text (cond
+                      (ascii-charset
+                       (setq org-ascii-charset ascii-charset)
+                       (org-export-string-as text 'ascii nil opts))
+                      (t
+                       text))))
+    plain-text))
 
 (defun org-mime-export-buffer-or-subtree (subtreep)
   "Similar to `org-html-export-as-html' and `org-org-export-as-org'.
 SUBTREEP is t if current node is subtree."
   (let* ((opts (org-mime-get-export-options subtreep))
-         (plain (org-mime-export-ascii-maybe (buffer-string) (buffer-string) opts))
+         (plain (org-mime-export-ascii-maybe (buffer-string) opts))
          (buf (org-export-to-buffer 'html "*Org Mime Export*" nil subtreep nil t opts))
          (body (prog1
                    (with-current-buffer buf
@@ -268,16 +280,6 @@ SUBTREEP is t if current node is subtree."
   "CLASS is used for new default html STYLE in exported html."
   (while (re-search-forward (format "class=\"%s\"" class) nil t)
     (replace-match (format "class=\"%s\" style=\"%s\"" class style))))
-
-;; ;; example addition to `org-mime-html-hook' adding a dark background
-;; ;; color to <pre> elements
-;; (add-hook 'org-mime-html-hook
-;;           (lambda ()
-;;             (org-mime-change-element-style
-;;              "pre" (format "color: %s; background-color: %s;"
-;;                            "#E6E1DC" "#232323"))
-;;             (org-mime-change-class-style
-;;              "verse" "border-left: 2px solid gray; padding-left: 4px;")))
 
 (defun org-mime-file (ext path id)
   "Markup a file with EXT, PATH and ID for attachment."
@@ -422,6 +424,26 @@ CURRENT-FILE is used to calculate full path of images."
     (message "Warning: org-element-map is not available. File links will not be attached.")
     nil)))
 
+(defun org-mime-apply-plain-text-hook (text)
+  "Apply TEXT hook."
+  (if org-mime-plain-text-hook
+      (with-temp-buffer
+        (insert text)
+        (goto-char (point-min))
+        (run-hooks 'org-mime-plain-text-hook)
+        (buffer-string))
+    text))
+
+(defun org-mime-apply-html-hook (html)
+  "Apply HTML hook."
+  (if org-mime-html-hook
+      (with-temp-buffer
+        (insert html)
+        (goto-char (point-min))
+        (run-hooks 'org-mime-html-hook)
+        (buffer-string))
+    html))
+
 (defun org-mime-insert-html-content (plain file html opts)
   "Insert PLAIN into FILE with HTML content and OPTS."
   (let* ((files (org-mime-extract-non-image-files))
@@ -453,7 +475,7 @@ CURRENT-FILE is used to calculate full path of images."
                           html)))
             files))
 
-    (insert (org-mime-multipart plain
+    (insert (org-mime-multipart (org-mime-apply-plain-text-hook plain)
                                 html
                                 (if images (mapconcat 'identity images "\n"))))
 
@@ -542,8 +564,7 @@ If called with an active region only export that region, otherwise entire body."
          (org-text (buffer-substring html-start html-end))
 ;; to hold attachments for inline html images
          (opts (org-mime-get-buffer-export-options))
-         (ascii-charset (org-mime-use-ascii-charset))
-         (plain (org-mime-export-ascii-maybe org-text org-text))
+         (plain (org-mime-export-ascii-maybe org-text))
          (html (org-mime-export-string org-text opts))
          (file (make-temp-name (expand-file-name
                                 "mail" temporary-file-directory))))
@@ -563,16 +584,6 @@ If called with an active region only export that region, otherwise entire body."
     ;; restore part tags
     (when part-tags
       (insert (mapconcat #'identity part-tags "\n")))))
-
-(defun org-mime-apply-html-hook (html)
-  "Apply HTML hook."
-  (if org-mime-html-hook
-      (with-temp-buffer
-        (insert html)
-        (goto-char (point-min))
-        (run-hooks 'org-mime-html-hook)
-        (buffer-string))
-    html))
 
 (defun org-mime--get-buffer-title ()
   "Get buffer title."

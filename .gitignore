@@ -1,4 +1,6 @@
 ### /Users/cb/.gitignore-boilerplates/Global/Emacs.gitignore
+TAGS
+tags
 
 *~
 \#*\#

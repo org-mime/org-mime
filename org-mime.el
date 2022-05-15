@@ -110,7 +110,7 @@
 ;;                 (replace-match "<span style=\"color:red\">\\1</span>"))))
 ;;
 ;; 3. The quoted mail uses Gmail's style, so mail replies looks clean and modern.
-;; If you prefer the old style, please set `org-mime-beautify-quoted-mail' to nil.
+;; If you prefer the old style, please set `org-mime-beautify-quoted-mail-p' to nil.
 ;;
 ;; 4. Please note this program can only embed exported HTML into mail.
 ;;    Org-mode is responsible for rendering HTML.
@@ -128,7 +128,7 @@
 (require 'org)
 (require 'ox-org)
 
-(defcustom org-mime-beautify-quoted-mail t
+(defcustom org-mime-beautify-quoted-mail-p t
   "Beautify quoted mail in more clean HTML, like Gmail."
   :group 'org-mime
   :type 'boolean)
@@ -298,8 +298,10 @@ SUBTREEP is t if current node is subtree."
     (vm "?")))
 
 (defun org-mime-beautify-quoted (html)
-  "Clean up quoted mail in modern UI style.
+  "Beautify quoted mail in modern UI style.
 HTML is the body of the message."
+  (when org-mime-debug
+    (message "org-mime-beautify-quoted called => %s" html))
   (let ((quote-depth 0)
         (line-depth 0)
         (in-quote-p nil)
@@ -345,7 +347,7 @@ multipart/related part."
                  plain
                  (when images "<#multipart type=related>")
                  "<#part type=text/html>\n"
-                 (if org-mime-beautify-quoted-mail
+                 (if org-mime-beautify-quoted-mail-p
                      (org-mime-beautify-quoted html)
                    html)
                  images

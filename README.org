@@ -95,7 +95,7 @@ Below code renders text between "#" in red color,
 #+end_src
 For other customization options see the org-mime customization group.
 ** Beautify quoted mail when replying
-It already works out of box. Currently it emulates Gmail's style. You can go back the old style by =(setq org-mime-beautify-quoted-mail-p nil)=.
+It already works out of box. Currently it emulates Gmail's style.
 ** Export options
 To avoid exporting TOC, you can setup =org-mime-export-options= which overrides Org default settings (but still inferior to file-local settings),
 #+begin_src elisp

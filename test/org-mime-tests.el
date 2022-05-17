@@ -269,37 +269,6 @@
       (should-not (string-match "SECTION_ONE" str)))
     (kill-buffer orgBuf)))
 
-(ert-deftest test-org-mime-beautify-quoted-para-breaks ()
-    (setq html (concat "<p>\n"
-                       "Hello there\n"
-                       "</p>\n"
-                       "\n"
-                       "<p>\n"
-                       "&gt; this is a long-ish para that is broken\n"
-                       "&gt; on two lines\n"
-                       "&gt;\n"
-                       "&gt; followed by a single-line para\n"
-                       "</p>\n"))
-    (setq expected (concat "<p>\n"
-                           "Hello there\n"
-                           "</p>\n"
-                           "\n"
-                           "<p>\n"
-                           "<blockquote class=\"gmail_quote\" style=\"margin:0 0 0 .8ex;border-left:1px #ccc solid;padding-left:1ex\">\n"
-                           "\n"
-                           "<div>this is a long-ish para that is broken\n"
-                           "on two lines\n"
-                           "</div>\n"
-                           "<div>\n"
-                           "<br /></div>\n"
-                           "<div>followed by a single-line para\n"
-                           "\n"
-                           "</div></blockquote>\n"
-                           "</p>\n"))
-    (setq beautified (org-mime-beautify-quoted html))
-    (should (equal beautified expected)))
-
-
 (ert-deftest test-org-mime-extract-non-org ()
   (let* ((content (concat "*hello world\n"
                           "<#part type=\"application/pdf\" filename=\"1.pdl\" disposition=attachment>\n<#/part>\n"

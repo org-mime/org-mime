@@ -16,6 +16,9 @@ tramp
 .org-id-locations
 *_archive
 
+# ELPA -generated files
+/org-mime-autoloads.el
+/org-mime-pkg.el
 
 ### /Users/cb/.gitignore-boilerplates/Global/Vim.gitignore
 

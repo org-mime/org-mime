@@ -127,6 +127,7 @@
 (require 'org)
 (require 'ox-org)
 (require 'message)
+(require 'sendmail)
 
 (defcustom org-mime-use-property-inheritance nil
   "Non-nil means al MAIL_ properties apply also for sub-levels."

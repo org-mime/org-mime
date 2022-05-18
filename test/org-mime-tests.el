@@ -304,4 +304,12 @@
     (org-mime-revert-to-plain-text-mail)
     (should (string= (string-trim (buffer-string))
                      "--text follows this line--\ntest\nhello"))))
+
+(ert-deftest test-org-mime-reply-quoted-separator ()
+  (should (not (org-mime-find-quoted-separator "No pattern")))
+  (should (string= (org-mime-find-quoted-separator ">>>>> \"chen\" == chen bin <chenbin@email.com> writes:")
+                   "^>>>>>[^>=]+==\\([^=\r\n]+\\)$"))
+  (should (string= (org-mime-find-quoted-separator "On Sat, May 14 2022 at 23:30 -07, Chen Bin <notifications@github.com> wrote:")
+                    "^\\(On [^\r\n]+ wrote:\\)$")))
+
 (ert-run-tests-batch-and-exit)

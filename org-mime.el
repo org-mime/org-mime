@@ -171,11 +171,12 @@ Default (nil) selects the original org file."
   :group 'org-mime
   :type 'string)
 
-(defcustom org-mime-mail-quoted-separator
-  "^>>>>>[^>=]+==\\([^=\r\n]+\\)"
-  "Below this separator is mostly quoted mail."
+(defcustom org-mime-mail-quoted-separators
+  '("^>>>>>[^>=]+==\\([^=\r\n]+\\)$"
+    "^\\(On [^\r\n]+ wrote:\\)$")
+  "Possible separators.  Below the separator is mostly quoted mail."
   :group 'org-mime
-  :type 'string)
+  :type '(repeat string))
 
 (defvar org-mime-export-options '(:with-latex dvipng)
   "Default export options which may override org buffer/subtree options.
@@ -499,9 +500,20 @@ CURRENT-FILE is used to calculate full path of images."
       (list :secure-tags (nreverse secure-tags)
             :part-tags (nreverse part-tags)))))
 
+(defun org-mime-find-quoted-separator (content)
+  "Find correct separator to extract quoted mail from CONTENT."
+  (let ((rlt (cl-find-if (lambda (p)
+                          (string-match p content))
+                        org-mime-mail-quoted-separators)))
+    (when org-mime-debug
+      (message "org-mime-find-quoted-separator called => %s" rlt))
+    rlt))
+
 (defun org-mime-extract-my-reply (content)
   "Extract my reply from CONTENT (no quoted content)."
-  (let* ((arr (split-string content org-mime-mail-quoted-separator))
+  (let* ((quoted-separator (org-mime-find-quoted-separator content))
+         (arr (if quoted-separator (split-string content quoted-separator)
+                (list content)))
          rlt)
 
     ;; extract reply
@@ -509,7 +521,7 @@ CURRENT-FILE is used to calculate full path of images."
 
     ;; extract quoted mail
     (when (> (length arr) 1)
-      (when (string-match org-mime-mail-quoted-separator content)
+      (when (and quoted-separator (string-match quoted-separator content) )
         (setq rlt (plist-put rlt
                              'REPLY-QUOTED-TITLE
                              (string-trim (match-string 1 content)))))

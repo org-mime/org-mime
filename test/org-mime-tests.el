@@ -1,4 +1,4 @@
-;; org-mime-tests.el --- unit tests for org-mime -*- lexical-binding: t; -*-
+;; org-mime-tests.el --- unit tests for org-mime -*- coding: utf-8 -*-
 
 ;; Author: Chen Bin <chenbin DOT sh AT gmail DOT com>
 
@@ -25,23 +25,21 @@
 (require 'org-mime)
 (require 'message)
 
-(defconst org-mime--mail-header
-  '("To: myname@mail.com\n"
-    "Subject: test subject\n"
-    "From: My Name <myname@yahoo.com>\n"
-    "--text follows this line--\n"))
-(defconst org-mime--mail-footer
-  '("--\n"
-    "Yous somebody\n\n"
-    "--\n"
-    "Some quote\n"))
+(defconst mail-header '("To: myname@mail.com\n"
+                       "Subject: test subject\n"
+                       "From: My Name <myname@yahoo.com>\n"
+                       "--text follows this line--\n"))
+(defconst mail-footer '("--\n"
+                        "Yous somebody\n\n"
+                        "--\n"
+                        "Some quote\n"))
 
 (defun run-org-mime-htmlize (&rest mail-body)
   "Create mail containing MAIL-BODY and run `org-mime-htmlize'."
   (with-temp-buffer
-    (apply #'insert org-mime--mail-header)
+    (apply #'insert mail-header)
     (apply #'insert mail-body)
-    (apply #'insert org-mime--mail-footer)
+    (apply #'insert mail-footer)
     (message-mode)
     (goto-char (point-min))
     (org-mime-htmlize)
@@ -77,7 +75,7 @@
       (setq opts (org-mime-get-export-options t))
       (should opts)
       (org-mime-org-subtree-htmlize)
-      (set-buffer (car (message-buffers)))
+      (switch-to-buffer (car (message-buffers)))
       (setq str (buffer-string)))
     (should (string-match "Subject: hello" str))
     (should (string-match "<#multipart" str))))
@@ -103,7 +101,7 @@
       (setq opts (org-mime-get-export-options t))
       (should opts)
       (org-mime-org-buffer-htmlize)
-      (set-buffer (car (message-buffers)))
+      (switch-to-buffer (car (message-buffers)))
       (setq str (buffer-string)))
     (should (string= "My mail subject" (plist-get props :MAIL_SUBJECT)))
     (should (string= "Someone <someone@somewhere.tld>" (plist-get props :MAIL_TO)))
@@ -140,14 +138,14 @@
    (should (string= (car h) "Cc"))
    (should (string= (cdr h) cc))))
 
-;; The two ASCII export tests below check for org-mode markup for the default
-;; case, where the export variable is nil or not valid, and check for absent
-;; org-mode markup for the three valid plain text exports. The ASCII export
-;; tests do not attempt to verify the exported coding type.
+;;; The two ASCII export tests below check for org-mode markup for the default
+;;; case, where the export variable is nil or not valid, and check for absent
+;;; org-mode markup for the three valid plain text exports. The ASCII export
+;;; tests do not attempt to verify the exported coding type.
 
 (ert-deftest test-org-mime-org-buffer-htmlize-ascii-plain-text ()
-  (let ((orgBuf (generate-new-buffer "*org-mode-test-buf*"))
-        str opts)
+  (let (str opts)
+    (setq orgBuf (generate-new-buffer "*org-mode-test-buf*"))
     (with-current-buffer orgBuf
       (insert "#+OPTIONS: toc:nil num:nil\n"
               "\n#+begin_example\n"
@@ -157,16 +155,17 @@
       (goto-char (point-min))
       (setq opts (org-mime-get-export-options t))
       (should opts)
-      (dolist (backend '(nil bogus ascii latin1 utf-8))
-        (setq org-mime-export-ascii backend)
-        (set-buffer orgBuf)
-        (org-mime-org-buffer-htmlize)
-        (set-buffer (car (message-buffers)))
-        (setq str (buffer-string))
-        (should (string-match "<#multipart" str))
-        (if (car (memq backend '(ascii latin1 utf-8)))
-            (should-not (string-match "#\\+begin_example" str))
-          (should (string-match "#\\+begin_example" str)))))
+      (mapcar (lambda (backend)
+                (setq org-mime-export-ascii backend)
+                (switch-to-buffer orgBuf)
+                (org-mime-org-buffer-htmlize)
+                (switch-to-buffer (car (message-buffers)))
+                (setq str (buffer-string))
+                (should (string-match "<#multipart" str))
+                (if (car (memq backend '(ascii latin1 utf-8)))
+                    (should-not (string-match "#\\+begin_example" str))
+                  (should (string-match "#\\+begin_example" str))))
+                '(nil bogus ascii latin1 utf-8)))
     (kill-buffer orgBuf)))
 
 (ert-deftest test-org-mime-htmlize-ascii-plain-text ()
@@ -174,12 +173,12 @@
     (mapcar (lambda (backend)
               (setq org-mime-export-ascii backend)
               (with-temp-buffer
-                (apply #'insert org-mime--mail-header)
+                (apply #'insert mail-header)
                 (insert "#+OPTIONS: toc:nil num:nil\n"
                         "\n#+begin_example\n"
                         "$ echo nothing to see here\n"
                         "#+end_example\n")
-                (apply #'insert org-mime--mail-footer)
+                (apply #'insert mail-footer)
                 (message-mode)
                 (goto-char (point-min))
                 (org-mime-htmlize)
@@ -196,10 +195,10 @@
 ;; Title, TOC, and Author.
 
 (ert-deftest test-org-mime-org-subtree-htmlize-ascii-opts-t ()
-  (let (str
-        (org-mime-export-options nil) ;; allow subtree properties
-        (org-mime-export-ascii 'utf-8)
-        (orgBuf (generate-new-buffer "*org-mode-test-buf*")))
+  (let (str opts)
+    (setq org-mime-export-options nil) ;; allow subtree properties
+    (setq org-mime-export-ascii 'utf-8)
+    (setq orgBuf (generate-new-buffer "*org-mode-test-buf*"))
     (with-current-buffer orgBuf
       ;; the initial options are ignored in favor of subtree options
       (insert "#+OPTIONS: toc:nil author:nil title:nil\n"
@@ -215,13 +214,13 @@
               "$ echo nothing to see here\n"
               "#+end_example\n")
       (org-mode)
-      (set-buffer orgBuf)
+      (switch-to-buffer orgBuf)
       ;; export subtree for Section 2
       (goto-char (point-min))
       (search-forward "Section 2")
       (goto-char (+ 1 (point)))
       (org-mime-org-subtree-htmlize)
-      (set-buffer (car (message-buffers)))
+      (switch-to-buffer (car (message-buffers)))
       (setq str (buffer-string))
       (setq case-fold-search nil) ;; match case for string-match
       (should-not (string-match "#\\+begin_example" str))
@@ -234,10 +233,10 @@
     (kill-buffer orgBuf)))
 
 (ert-deftest test-org-mime-org-subtree-htmlize-ascii-opts-nil ()
-  (let (str
-        (org-mime-export-options nil) ;; allow subtree properties
-        (org-mime-export-ascii 'utf-8)
-        (orgBuf (generate-new-buffer "*org-mode-test-buf*")))
+  (let (str opts)
+    (setq org-mime-export-options nil) ;; allow subtree properties
+    (setq org-mime-export-ascii 'utf-8)
+    (setq orgBuf (generate-new-buffer "*org-mode-test-buf*"))
     (with-current-buffer orgBuf
       ;; the initial options are ignored in favor of subtree options
       (insert "#+OPTIONS: toc:t author:t title:t\n"
@@ -253,13 +252,13 @@
               "$ echo nothing to see here\n"
               "#+end_example\n")
       (org-mode)
-      (set-buffer orgBuf)
+      (switch-to-buffer orgBuf)
       ;; export subtree for Section 2
       (goto-char (point-min))
       (search-forward "Section 2")
       (goto-char (+ 1 (point)))
       (org-mime-org-subtree-htmlize)
-      (set-buffer (car (message-buffers)))
+      (switch-to-buffer (car (message-buffers)))
       (setq str (buffer-string))
       (setq case-fold-search nil) ;; match case for string-match
       (should-not (string-match "#\\+begin_example" str))
@@ -269,6 +268,37 @@
       (should-not (string-match "Table of Contents" str))
       (should-not (string-match "SECTION_ONE" str)))
     (kill-buffer orgBuf)))
+
+(ert-deftest test-org-mime-beautify-quoted-para-breaks ()
+    (setq html (concat "<p>\n"
+                       "Hello there\n"
+                       "</p>\n"
+                       "\n"
+                       "<p>\n"
+                       "&gt; this is a long-ish para that is broken\n"
+                       "&gt; on two lines\n"
+                       "&gt;\n"
+                       "&gt; followed by a single-line para\n"
+                       "</p>\n"))
+    (setq expected (concat "<p>\n"
+                           "Hello there\n"
+                           "</p>\n"
+                           "\n"
+                           "<p>\n"
+                           "<blockquote class=\"gmail_quote\" style=\"margin:0 0 0 .8ex;border-left:1px #ccc solid;padding-left:1ex\">\n"
+                           "\n"
+                           "<div>this is a long-ish para that is broken\n"
+                           "on two lines\n"
+                           "</div>\n"
+                           "<div>\n"
+                           "<br /></div>\n"
+                           "<div>followed by a single-line para\n"
+                           "\n"
+                           "</div></blockquote>\n"
+                           "</p>\n"))
+    (setq beautified (org-mime-beautify-quoted html))
+    (should (equal beautified expected)))
+
 
 (ert-deftest test-org-mime-extract-non-org ()
   (let* ((content (concat "*hello world\n"
@@ -304,12 +334,4 @@
     (org-mime-revert-to-plain-text-mail)
     (should (string= (string-trim (buffer-string))
                      "--text follows this line--\ntest\nhello"))))
-
-(ert-deftest test-org-mime-reply-quoted-separator ()
-  (should (not (org-mime-find-quoted-separator "No pattern")))
-  (should (string= (org-mime-find-quoted-separator ">>>>> \"chen\" == chen bin <chenbin@email.com> writes:")
-                   "^>>>>>[^>=]+==\\([^=\r\n]+\\)$"))
-  (should (string= (org-mime-find-quoted-separator "On Sat, May 14 2022 at 23:30 -07, Chen Bin <notifications@github.com> wrote:")
-                    "^\\(On [^\r\n]+ wrote:\\)$")))
-
 (ert-run-tests-batch-and-exit)

@@ -1,12 +1,12 @@
-;;; org-mime.el --- org html export for text/html MIME emails
+;;; org-mime.el --- org html export for text/html MIME emails  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2010-2015 Eric Schulte, 2016-2021 Chen Bin
 
 ;; Author: Eric Schulte
-;; Maintainer: Chen Bin (redguardtoo)
+;; Maintainer: Chen Bin <chenbin.sh@gmail.com>
 ;; Keywords: mime, mail, email, html
 ;; Homepage: http://github.com/org-mime/org-mime
-;; Version: 0.2.6
+;; Version: 0.3.1
 ;; Package-Requires: ((emacs "25.1"))
 
 ;; This file is not part of GNU Emacs.
@@ -109,8 +109,7 @@
 ;;               (while (re-search-forward "#\\([^#]*\\)#" nil t)
 ;;                 (replace-match "<span style=\"color:red\">\\1</span>"))))
 ;;
-;; 3. The quoted mail uses Gmail's style, so mail replies looks clean and modern.
-;; If you prefer the old style, please set `org-mime-beautify-quoted-mail-p' to nil.
+;; 3. The quoted mail uses Gmail's style, so reply looks clean and modern.
 ;;
 ;; 4. Please note this program can only embed exported HTML into mail.
 ;;    Org-mode is responsible for rendering HTML.
@@ -127,6 +126,7 @@
 (require 'outline)
 (require 'org)
 (require 'ox-org)
+(require 'message)
 
 (defcustom org-mime-beautify-quoted-mail-p t
   "Beautify quoted mail in more clean HTML, like Gmail."
@@ -446,8 +446,8 @@ CURRENT-FILE is used to calculate full path of images."
         (buffer-string))
     html))
 
-(defun org-mime-insert-html-content (plain file html opts)
-  "Insert PLAIN into FILE with HTML content and OPTS."
+(defun org-mime-insert-html-content (plain file html)
+  "Insert PLAIN into FILE with HTML content."
   (let* ((files (org-mime-extract-non-image-files))
          ;; dvipng for inline latex because MathJax doesn't work in mail
          ;; Also @see https://github.com/org-mime/org-mime/issues/16
@@ -581,7 +581,7 @@ If called with an active region only export that region, otherwise entire body."
       (insert "\n"))
 
     ;; insert converted html
-    (org-mime-insert-html-content plain file html opts)
+    (org-mime-insert-html-content plain file html)
 
     ;; restore part tags
     (when part-tags
@@ -596,13 +596,11 @@ If called with an active region only export that region, otherwise entire body."
         (set-text-properties 0 (length txt) nil txt)
         txt))))
 
-(defun org-mime-compose (exported file to subject headers subtreep)
-  "Create mail body from EXPORTED in FILE with TO, SUBJECT, HEADERS.
-If SUBTREEP is t, current org node is subtree."
+(defun org-mime-compose (exported file to subject headers)
+  "Create mail body from EXPORTED in FILE with TO, SUBJECT, HEADERS."
   ;; start composing mail
   (let* ((html (car exported))
          (plain (cdr exported))
-         (export-opts (org-mime-get-export-options subtreep))
          patched-html)
     (compose-mail to subject headers nil)
     (message-goto-body)
@@ -612,7 +610,7 @@ If SUBTREEP is t, current org node is subtree."
                          (run-hooks 'org-mime-pre-html-hook)
                          (buffer-string)))
     ;; insert text
-    (org-mime-insert-html-content plain file patched-html export-opts)))
+    (org-mime-insert-html-content plain file patched-html)))
 
 (defun org-mime-buffer-properties ()
   "Extract buffer properties."
@@ -655,7 +653,6 @@ The cursor ends in the TO field."
   (interactive)
   (run-hooks 'org-mime-send-buffer-hook)
   (let* ((org-html-klipsify-src nil)
-         (region-p (org-region-active-p))
          (file (buffer-file-name (current-buffer)))
          (props (org-mime-buffer-properties))
          (subject (or (plist-get props :MAIL_SUBJECT)
@@ -671,7 +668,7 @@ The cursor ends in the TO field."
          (other-headers (org-mime-build-mail-other-headers cc
                                                            bcc
                                                            from)))
-    (org-mime-compose exported file to subject other-headers nil)
+    (org-mime-compose exported file to subject other-headers)
     (message-goto-to)))
 
 (defun org-mime-org-major-version ()
@@ -723,10 +720,7 @@ Following headline properties can determine the mail headers.
              ;; Thanks to Matt Price improving handling of cc & bcc headers
              (other-headers (org-mime-build-mail-other-headers cc bcc from))
              (org-export-show-temporary-export-buffer nil)
-             (subtree-opts (when (fboundp 'org-export--get-subtree-options)
-                             (org-export--get-subtree-options)))
              (org-export-show-temporary-export-buffer nil)
-             (org-major-version (org-mime-org-major-version))
              ;; I wrap these bodies in export blocks because in org-mime-compose
              ;; they get exported again. This makes each block conditionally
              ;; exposed depending on the backend.
@@ -734,7 +728,7 @@ Following headline properties can determine the mail headers.
                                          (org-mime-export-buffer-or-subtree t))))
         (save-restriction
           (org-narrow-to-subtree)
-          (org-mime-compose exported file to subject other-headers t))
+          (org-mime-compose exported file to subject other-headers))
         (message-goto-to)))))
 
 (defun org-mime-src--remove-overlay ()
@@ -807,8 +801,8 @@ Following headline properties can determine the mail headers.
 
 (defvar org-mime-src-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c C-c") 'org-mime-edit-src-exit)
-    (define-key map (kbd "C-x C-s") 'org-mime-edit-src-save)
+    (define-key map (kbd "C-c C-c") #'org-mime-edit-src-exit)
+    (define-key map (kbd "C-x C-s") #'org-mime-edit-src-save)
     map))
 
 (define-minor-mode org-mime-src-mode
@@ -891,7 +885,7 @@ Following headline properties can determine the mail headers.
       (message "Can not find plain text mail.")))))
 
 (defun org-mime-confirm-when-no-multipart ()
-  "Prompts whether to send email if the buffer is not htmlized."
+  "Prompt whether to send email if the buffer is not htmlized."
   (let ((found-multipart (save-excursion
                            (save-restriction
                              (widen)

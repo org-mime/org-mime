@@ -6,7 +6,7 @@
 ;; Maintainer: Chen Bin <chenbin.sh@gmail.com>
 ;; Keywords: mime, mail, email, html
 ;; Homepage: http://github.com/org-mime/org-mime
-;; Version: 0.3.1
+;; Version: 0.3.2
 ;; Package-Requires: ((emacs "25.1"))
 
 ;; This file is not part of GNU Emacs.
@@ -126,6 +126,7 @@
 (require 'outline)
 (require 'org)
 (require 'ox-org)
+(require 'ox-html)
 (require 'message)
 
 (defcustom org-mime-beautify-quoted-mail-p t

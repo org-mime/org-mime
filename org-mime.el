@@ -43,7 +43,7 @@
 ;;
 ;; `org-mime-org-subtree-htmlize' is similar to `org-mime-org-buffer-htmlize'
 ;; but works on current subtree.  It can read following subtree properties:
-;; MAIL_SUBJECT, MAIL_TO, MAIL_FROM, MAIL_CC, and MAIL_BCC.
+;; MAIL_SUBJECT, MAIL_TO, MAIL_FROM, MAIL_CC, and MAIL_BCC. MAIL_IN_REPLY_TO
 ;;
 ;; Here is the sample of a subtree:
 ;; * mail one
@@ -53,6 +53,7 @@
 ;;   :MAIL_FROM: sender@gmail.com
 ;;   :MAIL_CC: person2@gmail.com
 ;;   :MAIL_BCC: person3@gmail.com
+;;   :MAIL_IN_REPLY_TO: <MESSAGE_ID>
 ;;   :END:
 ;;
 ;; To avoid exporting the table of contents, you can setup
@@ -625,7 +626,7 @@ If called with an active region only export that region, otherwise entire body."
     (org-element-map (org-element-parse-buffer) 'keyword
       (lambda (keyword)
         (when (and (string= (org-element-property :key keyword) "PROPERTY")
-                   (string-match "^MAIL_\\(TO\\|SUBJECT\\|CC\\|BCC\\|FROM\\) +"
+                   (string-match "^MAIL_\\(TO\\|SUBJECT\\|CC\\|BCC\\|IN_REPLY_TO\\|FROM\\) +"
                                  (setq value (org-element-property :value keyword)))
                    (setq key (concat "MAIL_" (match-string 1 value)))
                    (setq rlt
@@ -634,9 +635,9 @@ If called with an active region only export that region, otherwise entire body."
                                     (string-trim (replace-regexp-in-string key "" value))))))))
     rlt))
 
-(defun org-mime-build-mail-other-headers (cc bcc from)
-  "Build mail header from CC, BCC, and FROM."
-  (let* ((arr (list (cons "Cc" cc) (cons "Bcc" bcc)  (cons "From" from )))
+(defun org-mime-build-mail-other-headers (cc bcc from in-reply-to)
+  "Build mail header from CC, BCC, IN_REPLY_TO and FROM."
+  (let* ((arr (list (cons "Cc" cc) (cons "Bcc" bcc)  (cons "From" from ) (cons "In-Reply-To" in-reply-to )))
          rlt)
     (dolist (e arr)
       (when (cdr e)
@@ -655,6 +656,8 @@ The following file keywords can be used to control the headers:
 #+MAIL_CC: some2@some.place
 #+MAIL_BCC: some3@some.place
 #+MAIL_FROM: sender@some.place
+#+MAIL_FROM: sender@some.place
+#+MAIL_IN_REPLY_TO: <MESSAGE_ID>
 
 The cursor ends in the TO field."
   (interactive)
@@ -672,9 +675,11 @@ The cursor ends in the TO field."
          (cc (plist-get props :MAIL_CC))
          (bcc (plist-get props :MAIL_BCC))
          (from (plist-get props :MAIL_FROM))
+         (in-reply-to (plist-get props :MAIL_IN_REPLY_TO))
          (other-headers (org-mime-build-mail-other-headers cc
                                                            bcc
-                                                           from)))
+                                                           from
+                                                           in-reply-to)))
     (org-mime-compose exported file to subject other-headers)
     (message-goto-to)))
 
@@ -722,10 +727,12 @@ Following headline properties can determine the mail headers.
                      (plist-get props :MAIL_CC)))
              (bcc (or (org-mime-attr "MAIL_BCC")
                       (plist-get props :MAIL_BCC)))
+             (in-reply-to (or (org-mime-attr "MAIL_IN_REPLY_TO")
+                      (plist-get props :MAIL_BCC)))
              (from (or (org-mime-attr "MAIL_FROM")
                        (plist-get props :MAIL_FROM)))
              ;; Thanks to Matt Price improving handling of cc & bcc headers
-             (other-headers (org-mime-build-mail-other-headers cc bcc from))
+             (other-headers (org-mime-build-mail-other-headers cc bcc from in-reply-to))
              (org-export-show-temporary-export-buffer nil)
              (org-export-show-temporary-export-buffer nil)
              ;; I wrap these bodies in export blocks because in org-mime-compose

@@ -50,7 +50,7 @@ The following key bindings are suggested, which bind the C-c M-o key sequence to
 ** =M-x org-mime-org-subtree-htmlize=
 =org-mime-org-subtree-htmlize= is similar to =org-mime-org-buffer-htmlize=
 but works on subtree. It can also read subtree properties MAIL_SUBJECT,
-MAIL_TO, MAIL_CC, and MAIL_BCC. Here is the sample of subtree:
+MAIL_TO, MAIL_CC, MAIL_BCC, and MAIL_IN_REPLY_TO. Here is the sample of subtree:
 #+begin_example
  * mail one
   :PROPERTIES:
@@ -58,6 +58,7 @@ MAIL_TO, MAIL_CC, and MAIL_BCC. Here is the sample of subtree:
   :MAIL_TO: person1@gmail.com
   :MAIL_CC: person2@gmail.com
   :MAIL_BCC: person3@gmail.com
+  :MAIL_IN_REPLY_TO: <MESSAGE-ID>
   :END:
  some text here ...
 #+end_example

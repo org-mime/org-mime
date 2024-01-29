@@ -572,7 +572,7 @@ If called with an active region only export that region, otherwise entire body."
          (org-text (buffer-substring html-start html-end))
 ;; to hold attachments for inline html images
          (opts (org-mime-get-buffer-export-options))
-         (plain (org-mime-export-ascii-maybe org-text))
+         (plain (org-mime-export-ascii-maybe org-text opts))
          (html (org-mime-export-string org-text opts))
          (file (make-temp-name (expand-file-name
                                 "mail" temporary-file-directory))))

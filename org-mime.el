@@ -6,8 +6,8 @@
 ;; Maintainer: Chen Bin <chenbin.sh@gmail.com>
 ;; Keywords: mime, mail, email, html
 ;; Homepage: http://github.com/org-mime/org-mime
-;; Version: 0.3.2
-;; Package-Requires: ((emacs "25.1"))
+;; Version: 0.3.3
+;; Package-Requires: ((emacs "27.1"))
 
 ;; This file is not part of GNU Emacs.
 
@@ -43,7 +43,7 @@
 ;;
 ;; `org-mime-org-subtree-htmlize' is similar to `org-mime-org-buffer-htmlize'
 ;; but works on current subtree.  It can read following subtree properties:
-;; MAIL_SUBJECT, MAIL_TO, MAIL_FROM, MAIL_CC, and MAIL_BCC. MAIL_IN_REPLY_TO
+;; MAIL_SUBJECT, MAIL_TO, MAIL_FROM, MAIL_CC, MAIL_BCC, MAIL_IN_REPLY_TO
 ;;
 ;; Here is the sample of a subtree:
 ;; * mail one
@@ -58,7 +58,7 @@
 ;;
 ;; To avoid exporting the table of contents, you can setup
 ;; `org-mime-export-options' as below,
-;;   (setq org-mime-export-options '(:with-latex dvipng
+;;   (setq org-mime-export-options '(:with-latex imagemagick
 ;;                                   :section-numbers nil
 ;;                                   :with-author nil
 ;;                                   :with-toc nil))
@@ -167,8 +167,8 @@ Default (nil) selects the original org file."
   :group 'org-mime
   :type 'sexp)
 
-(defcustom org-mime-org-html-with-latex-default 'dvipng
-  "Default value of `org-html-with-latex'."
+(defcustom org-mime-org-html-with-latex-default 'imagemagick
+  "Default value of `org-html-with-latex' calling `org-mime-htmlize'."
   :group 'org-mime
   :type 'sexp)
 
@@ -178,7 +178,7 @@ Default (nil) selects the original org file."
   :group 'org-mime
   :type 'string)
 
-(defvar org-mime-export-options '(:with-latex dvipng)
+(defvar org-mime-export-options '(:with-latex imagemagick)
   "Default export options which may override org buffer/subtree options.
 You could avoid exporting section-number/author/toc.
 It overrides Org default settings, but still inferior to file-local settings.")
@@ -452,8 +452,12 @@ CURRENT-FILE is used to calculate full path of images."
 (defun org-mime-insert-html-content (plain file html)
   "Insert PLAIN into FILE with HTML content."
   (let* ((files (org-mime-extract-non-image-files))
-         ;; dvipng for inline latex because MathJax doesn't work in mail
+         ;; imagemagick for inline latex because MathJax doesn't work in mail
          ;; Also @see https://github.com/org-mime/org-mime/issues/16
+         ;;
+         ;; It's reported imagemagick is better than dvipng,
+         ;; https://github.com/org-mime/org-mime/issues/92
+         ;;
          ;; (setq org-html-with-latex nil) sometimes useful
          (org-html-with-latex org-mime-org-html-with-latex-default)
          ;; we don't want to convert org file links to html
@@ -463,8 +467,6 @@ CURRENT-FILE is used to calculate full path of images."
          (org-export-preserve-breaks org-mime-preserve-breaks)
          ;; org 9
          (org-html-htmlize-output-type 'inline-css)
-         ;; org 8
-         (org-export-htmlize-output-type 'inline-css)
          (html-and-images (org-mime-replace-images html file))
          (images (cdr html-and-images))
          (html (org-mime-apply-html-hook (car html-and-images))))
@@ -636,7 +638,7 @@ If called with an active region only export that region, otherwise entire body."
     rlt))
 
 (defun org-mime-build-mail-other-headers (cc bcc from in-reply-to)
-  "Build mail header from CC, BCC, IN_REPLY_TO and FROM."
+  "Build mail header from CC, BCC, FROM, IN-REPLY-TO."
   (let* ((arr (list (cons "Cc" cc) (cons "Bcc" bcc)  (cons "From" from ) (cons "In-Reply-To" in-reply-to )))
          rlt)
     (dolist (e arr)

@@ -100,7 +100,7 @@ It already works out of box. Currently it emulates Gmail's style.
 ** Export options
 To avoid exporting TOC, you can setup =org-mime-export-options= which overrides Org default settings (but still inferior to file-local settings),
 #+begin_src elisp
-(setq org-mime-export-options '(:with-latex dvipng
+(setq org-mime-export-options '(:with-latex imagemagick
                                 :section-numbers nil
                                 :with-author nil
                                 :with-toc nil))

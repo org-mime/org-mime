@@ -114,25 +114,25 @@
         (from "from@m.c")
         h)
    ;; CC
-   (setq h (nth 0 (org-mime-build-mail-other-headers cc nil nil)))
+   (setq h (nth 0 (org-mime-build-mail-other-headers cc nil nil nil)))
    (should (string= (car h) "Cc"))
 
    ;; CC and BCC
-   (setq h (nth 0 (org-mime-build-mail-other-headers cc bcc nil)))
+   (setq h (nth 0 (org-mime-build-mail-other-headers cc bcc nil nil)))
    (should (string= (car h) "Bcc"))
    (should (string= (cdr h) bcc))
-   (setq h (nth 1 (org-mime-build-mail-other-headers cc bcc nil)))
+   (setq h (nth 1 (org-mime-build-mail-other-headers cc bcc nil nil)))
    (should (string= (car h) "Cc"))
    (should (string= (cdr h) cc))
 
    ;; CC, BCC, and FROM
-   (setq h (nth 0 (org-mime-build-mail-other-headers cc bcc from)))
+   (setq h (nth 0 (org-mime-build-mail-other-headers cc bcc from nil)))
    (should (string= (car h) "From"))
    (should (string= (cdr h) from))
-   (setq h (nth 1 (org-mime-build-mail-other-headers cc bcc from)))
+   (setq h (nth 1 (org-mime-build-mail-other-headers cc bcc from nil)))
    (should (string= (car h) "Bcc"))
    (should (string= (cdr h) bcc))
-   (setq h (nth 2 (org-mime-build-mail-other-headers cc bcc from)))
+   (setq h (nth 2 (org-mime-build-mail-other-headers cc bcc from nil)))
    (should (string= (car h) "Cc"))
    (should (string= (cdr h) cc))))
 

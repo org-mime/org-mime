@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  schedule:
+    # build at 00:05 everyday
+    - cron:  '5 0 * * *'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        emacs_version:
+          - 27.1
+          - 28.1
+          - 29.1
+    steps:
+    - uses: purcell/setup-emacs@master
+      with:
+        version: ${{ matrix.emacs_version }}
+
+    - uses: actions/checkout@v2
+
+    - name: Print emacs version
+      run: emacs --version
+
+    - name: Install dependency
+      run: sudo apt install aspell aspell-en
+
+    - name: Run tests
+      run: make test

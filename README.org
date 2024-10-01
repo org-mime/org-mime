@@ -1,6 +1,6 @@
 * org-mime
 
-[[https://github.com/org-mime/org-mime/actions/workflows/test.yml][https://github.com/org-mime/org-mime/actions/workflows/test.yml/badge.svg]]
+[[https://github.com/org-mime/org-mime/actions/workflows/test.yml][file:https://github.com/org-mime/org-mime/actions/workflows/test.yml/badge.svg]]
 [[https://elpa.nongnu.org/nongnu/org-mime.html][file:https://elpa.nongnu.org/nongnu/org-mime.svg]]
 [[http://melpa.org/#/org-mime][file:http://melpa.org/packages/org-mime-badge.svg]]
 [[http://stable.melpa.org/#/org-mime][file:http://stable.melpa.org/packages/org-mime-badge.svg]]

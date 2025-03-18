@@ -140,6 +140,11 @@
   :group 'org-mime
   :type 'boolean)
 
+(defcustom org-mime-beautify-quoted-mail-style "margin:0 0 0 .8ex;border-left:1px #ccc solid;padding-left:1ex"
+  "Style for beautifying quoted mail."
+  :type 'string
+  :group 'org-mime)
+
 (defcustom org-mime-use-property-inheritance nil
   "Non-nil means al MAIL_ properties apply also for sub-levels."
   :group 'org-mime
@@ -313,7 +318,9 @@ HTML is the body of the message."
   (let ((quote-depth 0)
         (line-depth 0)
         (in-quote-p nil)
-        (quote-opening "<blockquote class=\"gmail_quote\" style=\"margin:0 0 0 .8ex;border-left:1px #ccc solid;padding-left:1ex\">\n\n<div>")
+        (quote-opening (concat "<blockquote class=\"gmail_quote\" style=\""
+                               org-mime-beautify-quoted-mail-style
+                               "\">\n\n<div>"))
         (quote-closing "\n</div></blockquote>\n"))
     (with-temp-buffer
       ;; clean title of quoted

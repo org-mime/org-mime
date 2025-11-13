@@ -227,6 +227,18 @@ is inserted into the org-mime org-mode buffer."
   :type '(choice (string :tag "Instructions hint")
                  (const :tag "No hint" nil)))
 
+(defcustom org-mime-obey-display-buffer-p nil
+  "Whether `display-buffer-alist' is obeyed.
+Controls how windows are rearranged when calling
+`org-mime-edit-mail-in-org-mode'.
+
+The default (nil) means to delete all other windows then use
+`switch-to-buffer-other-window' to display the `org-mime-src-mode' org
+buffer.  When non-nil, instead, `display-buffer' is used, meaning the
+buffer will be displayed according to `display-buffer-alist'."
+  :group 'org-mime
+  :type 'boolean)
+
 (defvar org-mime-export-options '(:with-latex imagemagick)
   "Default export options which may override org buffer/subtree options.
 You could avoid exporting section-number/author/toc.
@@ -909,22 +921,31 @@ Following headline properties can determine the mail headers.
            (buffer (generate-new-buffer bufname))
            (overlay (org-mime-src--make-source-overlay beg end))
            (text (buffer-substring-no-properties beg end)))
-      (save-excursion
-        (delete-other-windows)
-        (org-switch-to-buffer-other-window buffer)
+
+      ;; Set up BUFFER before displaying it so that, when
+      ;; `org-mime-obey-display-buffer-p' is non-nil,
+      ;; `display-buffer-alist' (which uses `buffer-match-p'
+      ;; internally) can utilize BUFFER's name, major mode, buffer
+      ;; local variables, etc. as matching conditions
+      (with-current-buffer buffer
         (erase-buffer)
         (insert org-mime-instructions-hint)
         (insert text)
         (goto-char (point-min))
         (org-mode)
         (org-mime-src-mode)
-        
         ;; Set relevant local variables in `org-mime-src-mode' org
         ;; buffer
         (setq org-mime--saved-temp-window-config window-config
               org-mime-src--beg-marker beg
               org-mime-src--end-marker end
-              org-mime-src--overlay overlay))))))
+              org-mime-src--overlay overlay))
+
+      ;; Display BUFFER
+      (if org-mime-obey-display-buffer-p
+          (switch-to-buffer (display-buffer buffer))
+        (delete-other-windows)
+        (org-switch-to-buffer-other-window buffer))))))
 
 (defun org-mime-revert-to-plain-text-mail ()
   "Revert mail body to plain text."

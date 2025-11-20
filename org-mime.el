@@ -151,15 +151,37 @@
   :type 'boolean)
 
 (defcustom org-mime-library 'mml
-  "Library to use for marking up MIME elements."
+  "Library used by org-mime for generating MIME markup.
+The value should be one of the following symbols:
+- `mml' – Use the Message/MML library (the default).
+- `semi' – Use SEMI (a MIME framework used by Wanderlust and older mail
+  clients).  Choose this if your mail setup relies on SEMI.
+- `vm' – Use VM's (ViewMail) internal MIME composition functions.
+  Select this if you prepare mail using VM.
+
+In most cases, `mml' is the correct choice."
   :group 'org-mime
-  :type '(choice 'mml 'semi 'vm))
+  :type '(choice
+          (const :tag "MML (message-mode, default)" mml)
+          (const :tag "SEMI (Wanderlust / SEMI-based MUAs)" semi)
+          (const :tag "VM (VM mail client)" vm)))
 
 (defcustom org-mime-export-ascii nil
-  "ASCII export options for text/plain.
-Default (nil) selects the original org file."
+  "Charset to use when exporting the text/plain part as ASCII.
+When nil (the default), org-mime inserts the original Org source text
+without running ASCII export.
+
+When non-nil, the value must be one of the symbols accepted by
+`org-ascii-charset':
+- `ascii'  – Use only plain, 7-bit ASCII characters.
+- `latin1' – Allow Latin-1 (ISO-8859-1) characters.
+- `utf-8'  – Allow full UTF-8 characters."
   :group 'org-mime
-  :type '(choice 'ascii 'latin1 'utf-8))
+  :type '(choice
+          (const :tag "Insert original Org source (no ASCII export)" nil)
+          (const :tag "ASCII (7-bit)" ascii)
+          (const :tag "Latin-1" latin1)
+          (const :tag "UTF-8" utf-8)))
 
 (defcustom org-mime-preserve-breaks t
   "Temporary value of `org-export-preserve-breaks' during mime encoding."

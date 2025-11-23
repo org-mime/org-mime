@@ -525,10 +525,7 @@ CURRENT-FILE is used to calculate full path of images."
       (mapc (lambda (f)
               (when org-mime-debug (message "attaching: %s" f))
               (mml-attach-file f))
-            files))
-
-    ;; spacer
-    (insert "\n\n")))
+            files))))
 
 (defun org-mime-mail-body-begin ()
   "Get begin of mail body."
@@ -619,17 +616,14 @@ If called with an active region only export that region, otherwise entire body."
 
     ;; restore secure tags
     (when secure-tags
-      (insert (mapconcat #'identity secure-tags "\n"))
-      ;; spacer
-      (insert "\n\n"))
+      (insert (mapconcat #'identity secure-tags "\n")))
 
     ;; insert converted html
     (org-mime-insert-html-content plain file html)
 
     ;; restore part tags (attachments)
     (when part-tags
-      (insert (mapconcat #'identity part-tags "\n"))
-      (insert "\n\n"))))
+      (insert (mapconcat #'identity part-tags "\n")))))
 
 (defun org-mime--get-buffer-title ()
   "Get buffer title."

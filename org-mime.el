@@ -252,10 +252,17 @@ buffer holding the text to be exported.")
   "Enable debug logger.")
 
 ;; internal variables
-(defvar org-mime-src--overlay nil)
-(defvar org-mime-src--beg-marker nil)
-(defvar org-mime-src--end-marker nil)
-(defvar org-mime--saved-temp-window-config nil)
+(defvar-local org-mime-src--overlay nil)
+(put 'org-mime-src--overlay 'permanent-local t)
+
+(defvar-local org-mime-src--beg-marker nil)
+(put 'org-mime-src--beg-marker 'permanent-local t)
+
+(defvar-local org-mime-src--end-marker nil)
+(put 'org-mime-src--end-marker 'permanent-local t)
+
+(defvar-local org-mime--saved-temp-window-config nil)
+(put 'org-mime--saved-temp-window-config 'permanent-local t)
 
 (defun org-mime-get-buffer-export-options ()
   "Get export options in buffer."
@@ -846,9 +853,7 @@ Following headline properties can determine the mail headers.
          (source-buffer (marker-buffer beg)))
     (org-mime-edit-src-save)
     (unless source-buffer (error "Source buffer disappeared.  Aborting"))
-    ;; Insert modified code.  Ensure it ends with a newline character.
-    (kill-buffer edit-buffer)
-
+    
     ;; to the beginning of the block opening line.
     (goto-char beg)
 
@@ -856,8 +861,13 @@ Following headline properties can determine the mail headers.
     (set-marker beg nil)
     (set-marker end nil)
     (when org-mime--saved-temp-window-config
-      (set-window-configuration org-mime--saved-temp-window-config)
-      (setq org-mime--saved-temp-window-config nil))))
+      (unwind-protect
+          (set-window-configuration org-mime--saved-temp-window-config)
+        (setq org-mime--saved-temp-window-config nil)))
+
+    ;; After everything is cleaned up and the window configuration is
+    ;; restored, kill the edit buffer
+    (kill-buffer edit-buffer)))
 
 (defvar org-mime-src-mode-map
   (let ((map (make-sparse-keymap)))
@@ -892,20 +902,13 @@ Following headline properties can determine the mail headers.
    ((eq major-mode 'org-mode)
     (message "This command is not for `org-mode'."))
    (t
-    (setq org-mime--saved-temp-window-config (current-window-configuration))
-    (let* ((beg (copy-marker (org-mime-mail-body-begin)))
+    (let* ((window-config (current-window-configuration))
+           (beg (copy-marker (org-mime-mail-body-begin)))
            (end (copy-marker (or (org-mime-mail-signature-begin) (point-max)) t))
            (bufname "OrgMimeMailBody")
            (buffer (generate-new-buffer bufname))
            (overlay (org-mime-src--make-source-overlay beg end))
            (text (buffer-substring-no-properties beg end)))
-
-      (setq org-mime-src--beg-marker beg)
-      (setq org-mime-src--end-marker end)
-      ;; don't use local-variable because only user can't edit multiple emails
-      ;; or multiple embedded org code in one mail
-      (setq org-mime-src--overlay overlay)
-
       (save-excursion
         (delete-other-windows)
         (org-switch-to-buffer-other-window buffer)
@@ -914,7 +917,14 @@ Following headline properties can determine the mail headers.
         (insert text)
         (goto-char (point-min))
         (org-mode)
-        (org-mime-src-mode))))))
+        (org-mime-src-mode)
+        
+        ;; Set relevant local variables in `org-mime-src-mode' org
+        ;; buffer
+        (setq org-mime--saved-temp-window-config window-config
+              org-mime-src--beg-marker beg
+              org-mime-src--end-marker end
+              org-mime-src--overlay overlay))))))
 
 (defun org-mime-revert-to-plain-text-mail ()
   "Revert mail body to plain text."

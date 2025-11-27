@@ -878,7 +878,7 @@ Following headline properties can determine the mail headers.
    (t
     (setq org-mime--saved-temp-window-config (current-window-configuration))
     (let* ((beg (copy-marker (org-mime-mail-body-begin)))
-           (end (copy-marker (or (org-mime-mail-signature-begin) (point-max))))
+           (end (copy-marker (or (org-mime-mail-signature-begin) (point-max)) t))
            (bufname "OrgMimeMailBody")
            (buffer (generate-new-buffer bufname))
            (overlay (org-mime-src--make-source-overlay beg end))

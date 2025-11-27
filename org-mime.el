@@ -210,6 +210,23 @@ When non-nil, the value must be one of the symbols accepted by
   :group 'org-mime
   :type 'string)
 
+(defcustom org-mime-instructions-hint "## org-mime hint: Press C-c C-c to commit change.\n"
+  "Instructions inserted in the org-mime org-mode buffer.
+The org-mime org-mode buffer is an org-mode buffer created from calling
+`org-mime-edit-mail-in-org-mode', used to edit the mail body in
+org-mode.
+
+The value of this option is the string inserted at the top of an
+org-mime org-mode buffer, meant to provide to the user instructions
+about how to \"commit\" the changes made in this buffer to the original,
+parent email composition buffer.
+
+The value of this option can also be nil, meaning no instructions hint
+is inserted into the org-mime org-mode buffer."
+  :group 'org-mime
+  :type '(choice (string :tag "Instructions hint")
+                 (const :tag "No hint" nil)))
+
 (defvar org-mime-export-options '(:with-latex imagemagick)
   "Default export options which may override org buffer/subtree options.
 You could avoid exporting section-number/author/toc.
@@ -239,7 +256,6 @@ buffer holding the text to be exported.")
 (defvar org-mime-src--beg-marker nil)
 (defvar org-mime-src--end-marker nil)
 (defvar org-mime--saved-temp-window-config nil)
-(defconst org-mime-src--hint "## org-mime hint: Press C-c C-c to commit change.\n")
 
 (defun org-mime-get-buffer-export-options ()
   "Get export options in buffer."
@@ -784,7 +800,7 @@ Following headline properties can determine the mail headers.
   "Get edited code."
   (save-excursion
     (goto-char (point-min))
-    (search-forward org-mime-src--hint (point-max) t)
+    (search-forward (rx (literal org-mime-instructions-hint)) (point-max) t)
     (goto-char (line-beginning-position))
     (buffer-substring-no-properties (point) (point-max))))
 
@@ -894,7 +910,7 @@ Following headline properties can determine the mail headers.
         (delete-other-windows)
         (org-switch-to-buffer-other-window buffer)
         (erase-buffer)
-        (insert org-mime-src--hint)
+        (insert org-mime-instructions-hint)
         (insert text)
         (goto-char (point-min))
         (org-mode)

@@ -588,7 +588,7 @@ CURRENT-FILE is used to calculate full path of images."
 (defun org-mime-htmlize ()
   "Export a portion of an email to html using `org-mode'.
 If called with an active region only export that region, otherwise entire body."
-  (interactive)
+  (interactive nil message-mode)
   (when org-mime-debug (message "org-mime-htmlize called"))
 
   (let* ((region-p (org-region-active-p))
@@ -690,7 +690,7 @@ The following file keywords can be used to control the headers:
 #+MAIL_IN_REPLY_TO: <MESSAGE_ID>
 
 The cursor ends in the TO field."
-  (interactive)
+  (interactive nil org-mode)
   (run-hooks 'org-mime-send-buffer-hook)
   (let* ((org-html-klipsify-src nil)
          (file (buffer-file-name (current-buffer)))
@@ -735,7 +735,7 @@ Following headline properties can determine the mail headers.
   :MAIL_BCC: person3@gmail.com
   :MAIL_FROM: sender@gmail.com
   :END:"
-  (interactive "P")
+  (interactive "P" org-mode)
   (save-excursion
     (org-back-to-heading)
 
@@ -790,7 +790,7 @@ Following headline properties can determine the mail headers.
 
 (defun org-mime-edit-src-save ()
   "Save parent buffer with current state source-code buffer."
-  (interactive)
+  (interactive nil org-mime-src-mode)
   (set-buffer-modified-p nil)
   (let* ((edited-code (org-mime-edited-code))
          (beg org-mime-src--beg-marker)
@@ -823,7 +823,7 @@ Following headline properties can determine the mail headers.
 
 (defun org-mime-edit-src-exit ()
   "Kill current sub-editing buffer and return to source buffer."
-  (interactive)
+  (interactive nil org-mime-src-mode)
   (let* ((beg org-mime-src--beg-marker)
          (end org-mime-src--end-marker)
          (edit-buffer (current-buffer))
@@ -870,7 +870,7 @@ Following headline properties can determine the mail headers.
 
 (defun org-mime-edit-mail-in-org-mode ()
   "Call a special editor to edit the mail body in `org-mode'."
-  (interactive)
+  (interactive nil message-mode)
   ;; see `org-src--edit-element'
   (cond
    ((eq major-mode 'org-mode)
@@ -902,7 +902,7 @@ Following headline properties can determine the mail headers.
 
 (defun org-mime-revert-to-plain-text-mail ()
   "Revert mail body to plain text."
-  (interactive)
+  (interactive nil message-mode)
   (let* ((txt-sep "<#part type=text/plain>")
          (html-sep "<#part type=text/html>")
          mail-beg

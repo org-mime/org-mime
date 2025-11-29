@@ -807,7 +807,7 @@ Following headline properties can determine the mail headers.
   "Get edited code."
   (save-excursion
     (goto-char (point-min))
-    (search-forward (rx (literal org-mime-instructions-hint)) (point-max) t)
+    (search-forward org-mime-instructions-hint (point-max) t)
     (goto-char (line-beginning-position))
     (buffer-substring-no-properties (point) (point-max))))
 

@@ -297,7 +297,6 @@
     (should (equal (org-mime-beautify-quoted html)
                    expected))))
 
-
 (ert-deftest test-org-mime-extract-non-org ()
   (let* ((content (concat "*hello world\n"
                           "<#part type=\"application/pdf\" filename=\"1.pdl\" disposition=attachment>\n<#/part>\n"
@@ -332,4 +331,166 @@
     (org-mime-revert-to-plain-text-mail)
     (should (string= (string-trim (buffer-string))
                      "--text follows this line--\ntest\nhello"))))
+
+(ert-deftest test-org-mime-successive-saves ()
+  "Test for saving to mail buffer multiple times.
+Ensure the mail body is overwritten across successive saves in the
+org-mime org buffer for editing.  Saving should not mangle the mail
+buffer's text (e.g., appending to the mail body rather than overwriting
+the mail body)."
+  (let* ((orig-body "foo\n")
+         (orig-content
+          (mapconcat #'identity
+                     (append org-mime--mail-header
+                             (list orig-body))))
+         (new-text-1 "bar\n")
+         (new-text-2 "baz\n")
+         mail-buf)
+    (with-temp-buffer
+      (insert orig-content)
+      (message-mode)
+      (setq mail-buf (current-buffer))
+      (org-mime-edit-mail-in-org-mode)
+      (org-mime-edit-src-save)
+      (with-current-buffer mail-buf
+        (should (string-equal orig-content
+                              (buffer-string))))
+      (goto-char (point-max))
+      (insert new-text-1)
+      (org-mime-edit-src-save)
+      (with-current-buffer mail-buf
+        (should (string-equal
+                 (concat orig-content new-text-1)
+                 (buffer-string))))
+      (insert new-text-2)
+      (org-mime-edit-src-save)
+      (with-current-buffer mail-buf
+        (should (string-equal
+                 (concat orig-content new-text-1 new-text-2)
+                 (buffer-string)))))))
+
+(ert-deftest test-org-mime-obey-display-buffer-p ()
+  "Test `org-mime-obey-display-buffer-p'.
+Ensure the window configuration is as expected, according to the
+behavior of `org-mime-obey-display-buffer-p'."
+  (let ((mail-content
+         (mapconcat #'identity
+                    (append org-mime--mail-header
+                            (list "mail body")))))
+    (with-temp-buffer
+      (insert mail-content)
+      (message-mode)
+      ;; When `org-mime-obey-display-buffer-p' is nil, delete other
+      ;; windows and use `pop-to-buffer' to display the buffer and
+      ;; select it
+      (let ((org-mime-obey-display-buffer-p nil)
+            ;; Set `display-buffer-alist' to nil to ensure we don't
+            ;; accidentally get the right window configuration because
+            ;; of it
+            (display-buffer-alist nil)
+            editing-buf-name expected)
+        ;; Get the name of the editing buffer.  We retrieve the name
+        ;; because its buffer name equality is independent of whether
+        ;; `org-mime-edit-mail-in-org-mode' creates a new buffer every
+        ;; invocation or not
+        (save-window-excursion
+          (org-mime-edit-mail-in-org-mode)
+          (setq editing-buf-name (buffer-name)))
+        ;; Created the expected window configuration manually
+        (save-window-excursion
+          (delete-other-windows)
+          (pop-to-buffer editing-buf-name)
+          (setq expected
+                (window-state-get (frame-root-window) 'safe))
+          ;; Kill the editing buffer and make the mail body writable
+          ;; to avoid a later call to `org-mime-edit-mail-in-org-mode'
+          ;; creating a new buffer with a new name
+          (org-mime-edit-src-exit))
+        ;; Actual window configuration
+        (org-mime-edit-mail-in-org-mode)
+        (should (equal expected (window-state-get (frame-root-window) 'safe)))
+        ;; Ensure editing buffer is selected
+        (should (equal editing-buf-name (buffer-name)))
+        ;; Exit cleanly so the next test can be run
+        (org-mime-edit-src-exit))
+      ;; When `org-mime-obey-display-buffer-p' is non-nil, obey
+      ;; `display-buffer-alist'
+      (let* ((org-mime-obey-display-buffer-p t)
+             ;; Display editing buffer in the same window
+             (display-buffer-action 'display-buffer-same-window)
+             (display-buffer-alist
+              `(((and (major-mode . org-mode)
+                      (lambda (buf &rest _args)
+                        (buffer-local-value 'org-mime-src-mode
+                                            (get-buffer buf))))
+                 (,display-buffer-action))))
+             editing-buf-name expected)
+        ;; Get the name of the editing buffer.  We retrieve the name
+        ;; because its buffer name equality is independent of whether
+        ;; `org-mime-edit-mail-in-org-mode' creates a new buffer every
+        ;; invocation or not
+        (save-window-excursion
+          (org-mime-edit-mail-in-org-mode)
+          (setq editing-buf-name (buffer-name)))
+        ;; Created the expected window configuration manually
+        (save-window-excursion
+          (funcall display-buffer-action editing-buf-name nil)
+          (switch-to-buffer editing-buf-name)
+          (setq expected (window-state-get (frame-root-window) 'safe))
+          ;; Kill the editing buffer and make the mail body writable
+          ;; to avoid a later call to `org-mime-edit-mail-in-org-mode'
+          ;; creating a new buffer with a new name
+          (org-mime-edit-src-exit))
+        ;; Actual window configuration
+        (org-mime-edit-mail-in-org-mode)
+        (should (equal expected (window-state-get (frame-root-window) 'safe)))
+        (should (equal editing-buf-name (buffer-name)))
+        (org-mime-edit-src-exit)))))
+
+(ert-deftest test-org-mime-simultaneous-editing ()
+  "Test editing multiple mail bodies simultaneously
+Ensure the window configuration is as expected, according to the
+behavior of `org-mime-obey-display-buffer-p'."
+  (let* ((empty-mail
+          (mapconcat #'identity org-mime--mail-header))
+         (mail-body-1 "content 1\n")
+         (mail-body-2 "content 2\n")
+         mail-buf-1 mail-buf-2)
+    (with-temp-buffer
+      (insert empty-mail)
+      (message-mode)
+      (setq mail-buf-1 (current-buffer))
+      ;; Start editing first email
+      (org-mime-edit-mail-in-org-mode)
+      (goto-char (point-max))
+      (insert mail-body-1)
+      (org-mime-edit-src-exit)
+      (should (equal (concat empty-mail mail-body-1) (buffer-string)))
+      ;; Start editing second email
+      (with-temp-buffer
+        (insert empty-mail)
+        (message-mode)
+        (setq mail-buf-2 (current-buffer))
+        (org-mime-edit-mail-in-org-mode)
+        (goto-char (point-max))
+        (insert mail-body-2)
+        (org-mime-edit-src-exit)
+        (should (equal (concat empty-mail mail-body-2)
+                       (buffer-string)))
+        ;; Check that the first mail buffer remains the same
+        (should (equal (concat empty-mail mail-body-1)
+                       (with-current-buffer mail-buf-1 (buffer-string))))
+        ;; Edit the first mail buffer again
+        (with-current-buffer mail-buf-1
+          (org-mime-edit-mail-in-org-mode)
+          (goto-char (point-max))
+          (insert mail-body-1)
+          (org-mime-edit-src-exit)
+          (should (equal (concat empty-mail mail-body-1 mail-body-1)
+                         (buffer-string)))
+          ;; Then check that the second mail buffer is the same
+          (with-current-buffer mail-buf-2
+            (should (equal (concat empty-mail mail-body-2)
+                           (buffer-string)))))))))
+
 (ert-run-tests-batch-and-exit)

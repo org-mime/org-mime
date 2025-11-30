@@ -943,9 +943,7 @@ Following headline properties can determine the mail headers.
 
       ;; Display BUFFER
       (if org-mime-obey-display-buffer-p
-          (progn
-            (display-buffer buffer)
-            (switch-to-buffer buffer))
+          (pop-to-buffer buffer)
         (delete-other-windows)
         (org-switch-to-buffer-other-window buffer))))))
 

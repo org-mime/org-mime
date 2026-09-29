@@ -1,13 +1,13 @@
 ;;; org-mime.el --- org html export for text/html MIME emails  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2010-2015 Eric Schulte, 2016-2021 Chen Bin
+;; Copyright (C) 2010-2015 Eric Schulte, 2016-2026 Chen Bin
 
 ;; Author: Eric Schulte
-;; Maintainer: Chen Bin <chenbin.sh@gmail.com>
+;; Maintainer: Chen Bin <chb_sh AT hotmail DOT com>
 ;; Keywords: mime, mail, email, html
 ;; Homepage: http://github.com/org-mime/org-mime
-;; Version: 0.3.4
-;; Package-Requires: ((emacs "27.1"))
+;; Version: 0.3.5
+;; Package-Requires: ((emacs "29.1"))
 
 ;; This file is not part of GNU Emacs.
 
@@ -199,11 +199,6 @@ When non-nil, the value must be one of the symbols accepted by
   :group 'org-mime
   :type 'sexp)
 
-(defcustom org-mime-org-html-with-latex-default 'imagemagick
-  "Default value of `org-html-with-latex' calling `org-mime-htmlize'."
-  :group 'org-mime
-  :type 'sexp)
-
 (defcustom org-mime-mail-signature-separator
   (or message-signature-separator "^--\s?$")
   "Default mail signature separator."
@@ -239,6 +234,10 @@ buffer will be displayed according to `display-buffer-alist'."
   :group 'org-mime
   :type 'boolean)
 
+;; imagemagick for inline latex because MathJax doesn't work in mail
+;; Also @see https://github.com/org-mime/org-mime/issues/16
+;; It's reported imagemagick is better than dvipng,
+;; https://github.com/org-mime/org-mime/issues/92
 (defvar org-mime-export-options '(:with-latex imagemagick)
   "Default export options which may override org buffer/subtree options.
 You could avoid exporting section-number/author/toc.
@@ -279,8 +278,7 @@ buffer holding the text to be exported.")
 (defun org-mime-get-buffer-export-options ()
   "Get export options in buffer."
   (or org-mime-export-options
-      (and (fboundp 'org-export--get-inbuffer-options)
-           (org-export--get-inbuffer-options))))
+      (org-export--get-inbuffer-options)))
 
 (defun org-mime-get-export-options (subtreep)
   "SUBTREEP is t if current node is subtree."
@@ -334,7 +332,7 @@ SUBTREEP is t if current node is subtree."
       (setq options org-mime-export-options))
 
     ;; we won't export title from org file anyway
-    (if options (setq options (plist-put options 'title nil)))
+    (if options (setq options (plist-put options :title nil)))
 
     ;; emacs24.4+
     (org-export-string-as string 'html t options)))
@@ -438,7 +436,8 @@ multipart/related part."
 (defun org-mime-url-to-path (url current-file)
   "If URL is file path, convert to valid path.
 Or else use CURRENT-FILE to calculate path."
-  (let* ((dir (file-name-directory current-file))
+  (let* ((dir (if current-file (file-name-directory current-file)
+                default-directory))
          (path (expand-file-name url dir)))
     (cond
      ((string-match-p "^file:///" url)
@@ -470,7 +469,7 @@ CURRENT-FILE is used to calculate full path of images."
                           (match-string 1 text)))
                 (path (org-mime-url-to-path url current-file))
                 (ext (file-name-extension path))
-                (id (replace-regexp-in-string "[\/\\\\]" "_" path)))
+                (id (secure-hash 'sha256 path)))
 
            ;; Catch non-existent files here. Otherwise users get an error on sending.
            (unless (file-exists-p path)
@@ -485,18 +484,13 @@ CURRENT-FILE is used to calculate full path of images."
 
 (defun org-mime-extract-non-image-files ()
   "Extract non-image links in current buffer."
-  (cond
-   ((>= (org-mime-org-major-version) 9)
-    (org-element-map (org-element-parse-buffer) 'link
-      (lambda (link)
-        (when (and (string= (org-element-property :type link) "file")
-                   (not (string-match
-                         (cdr (assoc "file" org-html-inline-image-rules))
-                         (org-element-property :path link))))
-          (org-element-property :path link)))))
-   (t
-    (message "Warning: org-element-map is not available. File links will not be attached.")
-    nil)))
+  (org-element-map (org-element-parse-buffer) 'link
+    (lambda (link)
+      (when (and (string= (org-element-property :type link) "file")
+                 (not (string-match
+                       (cdr (assoc "file" org-html-inline-image-rules))
+                       (org-element-property :path link))))
+        (org-element-property :path link)))))
 
 (defun org-mime-apply-plain-text-hook (text)
   "Apply TEXT hook."
@@ -521,21 +515,6 @@ CURRENT-FILE is used to calculate full path of images."
 (defun org-mime-insert-html-content (plain file html)
   "Insert PLAIN into FILE with HTML content."
   (let* ((files (org-mime-extract-non-image-files))
-         ;; imagemagick for inline latex because MathJax doesn't work in mail
-         ;; Also @see https://github.com/org-mime/org-mime/issues/16
-         ;;
-         ;; It's reported imagemagick is better than dvipng,
-         ;; https://github.com/org-mime/org-mime/issues/92
-         ;;
-         ;; (setq org-html-with-latex nil) sometimes useful
-         (org-html-with-latex org-mime-org-html-with-latex-default)
-         ;; we don't want to convert org file links to html
-         (org-html-link-org-files-as-html nil)
-         (org-link-file-path-type 'absolute)
-         ;; prettify reply with ">"
-         (org-export-preserve-breaks org-mime-preserve-breaks)
-         ;; org 9
-         (org-html-htmlize-output-type 'inline-css)
          (html-and-images (org-mime-replace-images html file))
          (images (cdr html-and-images))
          (html (org-mime-apply-html-hook (car html-and-images))))
@@ -641,7 +620,14 @@ If called with an active region only export that region, otherwise entire body."
 ;; to hold attachments for inline html images
          (opts (org-mime-get-buffer-export-options))
          (plain (org-mime-export-ascii-maybe org-text opts))
+
+         ;; we don't want to convert org file links to html
+         (org-html-link-org-files-as-html nil)
+         (org-link-file-path-type 'absolute)
+         ;; prettify reply with ">"
+         (org-export-preserve-breaks org-mime-preserve-breaks)
          (html (org-mime-export-string org-text opts))
+
          (file (make-temp-name (expand-file-name
                                 "mail" temporary-file-directory))))
 
@@ -748,10 +734,6 @@ The cursor ends in the TO field."
     (org-mime-compose exported file to subject other-headers)
     (message-goto-to)))
 
-(defun org-mime-org-major-version ()
-  "Get Org major version."
-  (string-to-number (car (split-string (org-release) "\\."))))
-
 (defun org-mime-attr (property)
   "Get org mime PROPERTY."
   (org-entry-get nil property org-mime-use-property-inheritance))
@@ -793,12 +775,11 @@ Following headline properties can determine the mail headers.
              (bcc (or (org-mime-attr "MAIL_BCC")
                       (plist-get props :MAIL_BCC)))
              (in-reply-to (or (org-mime-attr "MAIL_IN_REPLY_TO")
-                      (plist-get props :MAIL_BCC)))
+                      (plist-get props :MAIL_IN_REPLY_TO)))
              (from (or (org-mime-attr "MAIL_FROM")
                        (plist-get props :MAIL_FROM)))
              ;; Thanks to Matt Price improving handling of cc & bcc headers
              (other-headers (org-mime-build-mail-other-headers cc bcc from in-reply-to))
-             (org-export-show-temporary-export-buffer nil)
              (org-export-show-temporary-export-buffer nil)
              ;; I wrap these bodies in export blocks because in org-mime-compose
              ;; they get exported again. This makes each block conditionally

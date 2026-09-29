@@ -9,7 +9,7 @@ This program sends HTML email using Org-mode HTML export.
 
 This approximates a WYSiWYG HTML mail editor from within Emacs, and can be useful for sending tables, fontified source code, and inline images in email.
 
-Tested on Emacs 25.1, 26.1, 27
+Tested on Emacs 29 30
 
 Screenshot:
 [[file:screenshot.png]]
@@ -101,18 +101,23 @@ It already works out of box. Currently it emulates Gmail's style.
 ** Export options
 To avoid exporting TOC, you can setup =org-mime-export-options= which overrides Org default settings (but still inferior to file-local settings),
 #+begin_src elisp
-(setq org-mime-export-options '(:with-latex imagemagick
-                                :section-numbers nil
-                                :with-author nil
-                                :with-toc nil))
+(setq org-mime-export-options
+      '(:with-latex imagemagick
+        :section-numbers nil
+        :with-author nil
+        :with-toc nil))
+
+(setq org-mime-export-options
+      '(:with-latex verbatim ; Keep everything in verbatim
+        :section-numbers nil
+        :with-author nil
+        :with-toc nil))
 #+end_src
 Or just setup your export options in org buffer/subtree.
 
 =org-mime-export-options= will override your export options if it's NOT nil.
 ** Latex export problem
 Please double check your org and latex setup. See [[https://github.com/org-mime/org-mime/issues/33]] for technical details.
-
-You can also modify the variable  =org-mime-org-html-with-latex-default=.
 
 ** fix exported plain text and html
 By default both the plain text and html are exported into the email.

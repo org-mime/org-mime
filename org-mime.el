@@ -243,6 +243,9 @@ buffer will be displayed according to `display-buffer-alist'."
 You could avoid exporting section-number/author/toc.
 It overrides Org default settings, but still inferior to file-local settings.")
 
+(defvar org-mime-export-with-attachments-p t
+  "Boolean to determine whether attachments contained at the top level of a buffer/subtree are attached to the mail composition buffer as email attachments. Default value is t.")
+
 (defvar org-mime-plain-text-hook nil
   "Hook to run over the plain text buffer before adding it to email.
 This is used to process plain text part of email .")
@@ -778,6 +781,8 @@ Following headline properties can determine the mail headers.
                       (plist-get props :MAIL_IN_REPLY_TO)))
              (from (or (org-mime-attr "MAIL_FROM")
                        (plist-get props :MAIL_FROM)))
+             (attach-dir (org-attach-dir nil))
+             (attach-files (and attach-dir (directory-files attach-dir t)))
              ;; Thanks to Matt Price improving handling of cc & bcc headers
              (other-headers (org-mime-build-mail-other-headers cc bcc from in-reply-to))
              (org-export-show-temporary-export-buffer nil)
@@ -789,6 +794,15 @@ Following headline properties can determine the mail headers.
         (save-restriction
           (org-narrow-to-subtree)
           (org-mime-compose exported file to subject other-headers))
+
+        ;; Add attachments if applicable.
+        (when org-mime-export-with-attachments-p
+          (message-goto-body)
+          (dolist (file attach-files)
+            (if (file-regular-p file)
+                (mml-attach-file file (mm-default-file-type file) nil "attachment"))))
+
+        ;; Go to the "To:" field of the message.
         (message-goto-to)))))
 
 (defun org-mime-src--remove-overlay ()

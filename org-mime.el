@@ -704,14 +704,19 @@ If called with an active region only export that region, otherwise entire body."
 The email buffer will contain both html and in org formats as mime
 alternatives.
 
-The following file keywords can be used to control the headers:
-#+MAIL_TO: some1@some.place
-#+MAIL_SUBJECT: a subject line
-#+MAIL_CC: some2@some.place
-#+MAIL_BCC: some3@some.place
-#+MAIL_FROM: sender@some.place
-#+MAIL_FROM: sender@some.place
-#+MAIL_IN_REPLY_TO: <MESSAGE_ID>
+The following file properties can be used to control the headers, for instance in a drawer at the top of the buffer as shown below.
+#+properties:
+:mail_to: some1@some.place
+:mail_subject: a subject line
+:mail_cc: some2@some.place
+:mail_bcc: some3@some.place
+:mail_from: sender@some.place
+:mail_from: sender@some.place
+:mail_in_reply_to: <message_id>
+:end:
+
+Instead of adding the properties in a drawer as above, they can also be added via the #+property: syntax as below.
+#+property: mail_to some1@some.place
 
 The cursor ends in the TO field."
   (interactive nil org-mode)
@@ -748,13 +753,13 @@ If HTMLIZE-FIRST-LEVEL is t, first level subtree of current node is htmlized.
 
 Following headline properties can determine the mail headers.
 * subtree heading
-  :PROPERTIES:
-  :MAIL_SUBJECT: mail title
-  :MAIL_TO: person1@gmail.com
-  :MAIL_CC: person2@gmail.com
-  :MAIL_BCC: person3@gmail.com
-  :MAIL_FROM: sender@gmail.com
-  :END:"
+  :properties:
+  :mail_subject: mail title
+  :mail_to: person1@gmail.com
+  :mail_cc: person2@gmail.com
+  :mail_bcc: person3@gmail.com
+  :mail_from: sender@gmail.com
+  :end:"
   (interactive "P" org-mode)
   (save-excursion
     (org-back-to-heading)

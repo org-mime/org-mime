@@ -145,11 +145,6 @@
   :type 'string
   :group 'org-mime)
 
-(defcustom org-mime-use-property-inheritance nil
-  "Non-nil means al MAIL_ properties apply also for sub-levels."
-  :group 'org-mime
-  :type 'boolean)
-
 (defcustom org-mime-library 'mml
   "Library used by org-mime for generating MIME markup.
 The value should be one of the following symbols:
@@ -744,7 +739,7 @@ The cursor ends in the TO field."
 
 (defun org-mime-attr (property)
   "Get org mime PROPERTY."
-  (org-entry-get nil property org-mime-use-property-inheritance))
+  (org-entry-get nil property t))
 
 ;;;###autoload
 (defun org-mime-org-subtree-htmlize (&optional htmlize-first-level)

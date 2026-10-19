@@ -669,21 +669,6 @@ If called with an active region only export that region, otherwise entire body."
     ;; insert text
     (org-mime-insert-html-content plain file patched-html)))
 
-(defun org-mime-buffer-properties ()
-  "Extract buffer properties."
-  (let* (rlt value key)
-    (org-element-map (org-element-parse-buffer) 'keyword
-      (lambda (keyword)
-        (when (and (string= (org-element-property :key keyword) "PROPERTY")
-                   (string-match "^MAIL_\\(TO\\|SUBJECT\\|CC\\|BCC\\|IN_REPLY_TO\\|FROM\\) +"
-                                 (setq value (org-element-property :value keyword)))
-                   (setq key (concat "MAIL_" (match-string 1 value)))
-                   (setq rlt
-                         (plist-put rlt
-                                    (intern (concat ":" key))
-                                    (string-trim (replace-regexp-in-string key "" value))))))))
-    rlt))
-
 (defun org-mime-build-mail-other-headers (cc bcc from in-reply-to)
   "Build mail header from CC, BCC, FROM, IN-REPLY-TO."
   (let* ((arr (list (cons "Cc" cc) (cons "Bcc" bcc)  (cons "From" from ) (cons "In-Reply-To" in-reply-to )))
@@ -718,18 +703,17 @@ The cursor ends in the TO field."
   (run-hooks 'org-mime-send-buffer-hook)
   (let* ((org-html-klipsify-src nil)
          (file (buffer-file-name (current-buffer)))
-         (props (org-mime-buffer-properties))
-         (subject (or (plist-get props :MAIL_SUBJECT)
+         (subject (or (org-mime-attr "mail_subject")
                       (org-mime--get-buffer-title)
                       (if (not file) (buffer-name (buffer-base-buffer))
                         (file-name-sans-extension
                          (file-name-nondirectory file)))))
          (exported (org-mime-export-buffer-or-subtree nil))
-         (to (plist-get props :MAIL_TO))
-         (cc (plist-get props :MAIL_CC))
-         (bcc (plist-get props :MAIL_BCC))
-         (from (plist-get props :MAIL_FROM))
-         (in-reply-to (plist-get props :MAIL_IN_REPLY_TO))
+         (to (org-mime-attr "mail_to"))
+         (cc (org-mime-attr "mail_cc"))
+         (bcc (org-mime-attr "mail_bcc"))
+         (from (org-mime-attr "mail_from"))
+         (in-reply-to (org-mime-attr "mail_in_reply_to"))
          (other-headers (org-mime-build-mail-other-headers cc
                                                            bcc
                                                            from
@@ -767,20 +751,13 @@ Following headline properties can determine the mail headers.
 
     (when (outline-on-heading-p nil)
       (let* ((file (buffer-file-name (current-buffer)))
-             (props (org-mime-buffer-properties))
-             (subject (or (org-mime-attr "MAIL_SUBJECT")
-                          (plist-get props :MAIL_SUBJECT)
-                          (nth 4 (org-heading-components))))
-             (to (or (org-mime-attr "MAIL_TO")
-                     (plist-get props :MAIL_TO)))
-             (cc (or (org-mime-attr "MAIL_CC")
-                     (plist-get props :MAIL_CC)))
-             (bcc (or (org-mime-attr "MAIL_BCC")
-                      (plist-get props :MAIL_BCC)))
-             (in-reply-to (or (org-mime-attr "MAIL_IN_REPLY_TO")
-                      (plist-get props :MAIL_IN_REPLY_TO)))
-             (from (or (org-mime-attr "MAIL_FROM")
-                       (plist-get props :MAIL_FROM)))
+             (subject (or (org-mime-attr "mail_subject")
+                           (nth 4 (org-heading-components))))
+             (to (org-mime-attr "mail_to"))
+             (cc (org-mime-attr "mail_cc"))
+             (bcc (org-mime-attr "mail_bcc"))
+             (in-reply-to (org-mime-attr "mail_in_reply_to"))
+             (from (org-mime-attr "mail_from"))
              (attach-dir (org-attach-dir nil))
              (attach-files (and attach-dir (directory-files attach-dir t)))
              ;; Thanks to Matt Price improving handling of cc & bcc headers

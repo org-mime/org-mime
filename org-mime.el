@@ -145,11 +145,6 @@
   :type 'string
   :group 'org-mime)
 
-(defcustom org-mime-use-property-inheritance nil
-  "Non-nil means al MAIL_ properties apply also for sub-levels."
-  :group 'org-mime
-  :type 'boolean)
-
 (defcustom org-mime-library 'mml
   "Library used by org-mime for generating MIME markup.
 The value should be one of the following symbols:
@@ -674,21 +669,6 @@ If called with an active region only export that region, otherwise entire body."
     ;; insert text
     (org-mime-insert-html-content plain file patched-html)))
 
-(defun org-mime-buffer-properties ()
-  "Extract buffer properties."
-  (let* (rlt value key)
-    (org-element-map (org-element-parse-buffer) 'keyword
-      (lambda (keyword)
-        (when (and (string= (org-element-property :key keyword) "PROPERTY")
-                   (string-match "^MAIL_\\(TO\\|SUBJECT\\|CC\\|BCC\\|IN_REPLY_TO\\|FROM\\) +"
-                                 (setq value (org-element-property :value keyword)))
-                   (setq key (concat "MAIL_" (match-string 1 value)))
-                   (setq rlt
-                         (plist-put rlt
-                                    (intern (concat ":" key))
-                                    (string-trim (replace-regexp-in-string key "" value))))))))
-    rlt))
-
 (defun org-mime-build-mail-other-headers (cc bcc from in-reply-to)
   "Build mail header from CC, BCC, FROM, IN-REPLY-TO."
   (let* ((arr (list (cons "Cc" cc) (cons "Bcc" bcc)  (cons "From" from ) (cons "In-Reply-To" in-reply-to )))
@@ -704,32 +684,36 @@ If called with an active region only export that region, otherwise entire body."
 The email buffer will contain both html and in org formats as mime
 alternatives.
 
-The following file keywords can be used to control the headers:
-#+MAIL_TO: some1@some.place
-#+MAIL_SUBJECT: a subject line
-#+MAIL_CC: some2@some.place
-#+MAIL_BCC: some3@some.place
-#+MAIL_FROM: sender@some.place
-#+MAIL_FROM: sender@some.place
-#+MAIL_IN_REPLY_TO: <MESSAGE_ID>
+The following file properties can be used to control the headers, for instance in a drawer at the top of the buffer as shown below.
+#+properties:
+:mail_to: some1@some.place
+:mail_subject: a subject line
+:mail_cc: some2@some.place
+:mail_bcc: some3@some.place
+:mail_from: sender@some.place
+:mail_from: sender@some.place
+:mail_in_reply_to: <message_id>
+:end:
+
+Instead of adding the properties in a drawer as above, they can also be added via the #+property: syntax as below.
+#+property: mail_to some1@some.place
 
 The cursor ends in the TO field."
   (interactive nil org-mode)
   (run-hooks 'org-mime-send-buffer-hook)
   (let* ((org-html-klipsify-src nil)
          (file (buffer-file-name (current-buffer)))
-         (props (org-mime-buffer-properties))
-         (subject (or (plist-get props :MAIL_SUBJECT)
+         (subject (or (org-mime-attr "mail_subject")
                       (org-mime--get-buffer-title)
                       (if (not file) (buffer-name (buffer-base-buffer))
                         (file-name-sans-extension
                          (file-name-nondirectory file)))))
          (exported (org-mime-export-buffer-or-subtree nil))
-         (to (plist-get props :MAIL_TO))
-         (cc (plist-get props :MAIL_CC))
-         (bcc (plist-get props :MAIL_BCC))
-         (from (plist-get props :MAIL_FROM))
-         (in-reply-to (plist-get props :MAIL_IN_REPLY_TO))
+         (to (org-mime-attr "mail_to"))
+         (cc (org-mime-attr "mail_cc"))
+         (bcc (org-mime-attr "mail_bcc"))
+         (from (org-mime-attr "mail_from"))
+         (in-reply-to (org-mime-attr "mail_in_reply_to"))
          (other-headers (org-mime-build-mail-other-headers cc
                                                            bcc
                                                            from
@@ -739,7 +723,7 @@ The cursor ends in the TO field."
 
 (defun org-mime-attr (property)
   "Get org mime PROPERTY."
-  (org-entry-get nil property org-mime-use-property-inheritance))
+  (org-entry-get nil property t))
 
 ;;;###autoload
 (defun org-mime-org-subtree-htmlize (&optional htmlize-first-level)
@@ -748,13 +732,13 @@ If HTMLIZE-FIRST-LEVEL is t, first level subtree of current node is htmlized.
 
 Following headline properties can determine the mail headers.
 * subtree heading
-  :PROPERTIES:
-  :MAIL_SUBJECT: mail title
-  :MAIL_TO: person1@gmail.com
-  :MAIL_CC: person2@gmail.com
-  :MAIL_BCC: person3@gmail.com
-  :MAIL_FROM: sender@gmail.com
-  :END:"
+  :properties:
+  :mail_subject: mail title
+  :mail_to: person1@gmail.com
+  :mail_cc: person2@gmail.com
+  :mail_bcc: person3@gmail.com
+  :mail_from: sender@gmail.com
+  :end:"
   (interactive "P" org-mode)
   (save-excursion
     (org-back-to-heading)
@@ -767,20 +751,13 @@ Following headline properties can determine the mail headers.
 
     (when (outline-on-heading-p nil)
       (let* ((file (buffer-file-name (current-buffer)))
-             (props (org-mime-buffer-properties))
-             (subject (or (org-mime-attr "MAIL_SUBJECT")
-                          (plist-get props :MAIL_SUBJECT)
-                          (nth 4 (org-heading-components))))
-             (to (or (org-mime-attr "MAIL_TO")
-                     (plist-get props :MAIL_TO)))
-             (cc (or (org-mime-attr "MAIL_CC")
-                     (plist-get props :MAIL_CC)))
-             (bcc (or (org-mime-attr "MAIL_BCC")
-                      (plist-get props :MAIL_BCC)))
-             (in-reply-to (or (org-mime-attr "MAIL_IN_REPLY_TO")
-                      (plist-get props :MAIL_IN_REPLY_TO)))
-             (from (or (org-mime-attr "MAIL_FROM")
-                       (plist-get props :MAIL_FROM)))
+             (subject (or (org-mime-attr "mail_subject")
+                           (nth 4 (org-heading-components))))
+             (to (org-mime-attr "mail_to"))
+             (cc (org-mime-attr "mail_cc"))
+             (bcc (org-mime-attr "mail_bcc"))
+             (in-reply-to (org-mime-attr "mail_in_reply_to"))
+             (from (org-mime-attr "mail_from"))
              (attach-dir (org-attach-dir nil))
              (attach-files (and attach-dir (directory-files attach-dir t)))
              ;; Thanks to Matt Price improving handling of cc & bcc headers
